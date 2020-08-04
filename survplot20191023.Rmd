@@ -1,0 +1,982 @@
+---
+title: "Learning (not) to Trade"
+author: "Java"
+output:
+  pdf_document:
+    keep_tex: yes
+    includes:
+      in_header: diss.sty
+  html_notebook: default
+  html_document: default
+  word_document: default
+---
+
+```{r echo = F, results="hide", warning=F, message=F}
+library(data.table)
+library(tidyr)
+library(lubridate)
+library(lattice)
+library(openintro)
+library(zoo)
+library(pracma)
+library(nloptr)
+library(speedglm)
+library(timeDate)
+# library(riskRegression)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(magrittr)
+# library(doMC)
+library(survival)
+library(plm)
+library(pglm)
+library(Rchoice)
+library(parallel)
+
+knitr::opts_chunk$set(echo = F, cache = F, eval = F, message=F)
+
+options(stringsAsFactors = F,
+        datatable.WhenJisSymbolThenCallingScope = T)
+
+# get_data= function(str){
+#   return(get(load(str)))
+# }
+```
+
+```{r loadmiscdata, include = F, eval = F, echo = F}
+###### Identify sec_id - security_key
+# starttime = Sys.time()
+# sty = read.csv('securities.txt', sep = ';', header = T) %>%
+#   setNames(c("sec_id", "name","sec_type","sec_group", "asset_type", "symbol","isin","stock_exchange",
+#              "cur","strike","maturity","contractsize","call_put","cotation_type", "cotation_factor",
+#              "underlying","underlying_id","top")
+#   ) %>% 
+#   as.data.table  %>% .[,isin:=substr(isin,1,12)] %>%
+#   .[,security_key := paste0(isin, "_", stock_exchange, "_", cur)]
+# Sys.time()-starttime
+
+starttime = Sys.time()
+sty1 = fread('securities.txt', sep = ';', header = T, col.names = c(
+  "sec_id", "name","sec_type","sec_group", "asset_type", "symbol","isin","stock_exchange", "cur","strike","maturity","contractsize","call_put","cotation_type", "cotation_factor", "underlying","underlying_id","top"
+  ))  %>% .[,isin:=substr(isin,1,12)] %>%
+  .[,security_key := paste0(isin, "_", stock_exchange, "_", cur)]
+Sys.time()-starttime
+
+
+
+### insiders
+insiders = read.csv('insiders_accounts.txt', sep = ";", header = T) %>% 
+  setNames(c("client", "attr_id", "attr_val")) %>%
+  as.data.table 
+
+### personas info
+persID = read.csv('persons_accounts.txt', sep = ";", header = T) %>%
+  setNames(c("account_id", "person_id", "title_label", "birth_year", "language", "numbered", "company_flag")) %>% 
+  as.data.table # we do not use person_id in the end because some people use different trading strategies for different account anyway.
+
+### type of accounts
+acc_types = read.csv('accounts_types.txt', sep = ";", header = T) %>% 
+  setNames(c("client", "attr_id", "attr_val")) %>% 
+  as.data.table
+
+### Retail and large private accounts, trading accounts, and swissquote label
+Tab4ext = read.csv('Tab4_extended.txt', sep = ";", header = T) %>% 
+  setNames( c("account_id", "client",  "mark_camp", "age", "country_res", 
+                                "client_segm", "brand_id","brand_lab", "acc_type_id", "acc_type",  
+                                "status",  "status_val", "acc_status_date"))
+
+Tab4ext$acc_status_date %<>% as.Date
+Tab4ext %<>% as.data.table %>% setorder('client') %>% .[brand_lab=='Swissquote' & acc_type=='Trading'] %>%
+  .[client_segm %in% c("HNW accounts", "Retail account")] 
+
+last_close = Tab4ext[status_val == 'Closed',list(last_close=max(acc_status_date, na.rm = T)),by='client']
+last_open = Tab4ext[status_val == 'Open',list(last_open=max(acc_status_date, na.rm = T)),by='client']
+
+Closed_account = merge(last_close,last_open,all = T)
+Closed_account$closing_date = ifelse(Closed_account$last_open < Closed_account$last_close, Closed_account$last_close, NA) %>% as.Date
+
+### Clients: (retail accounts, large private accounts, Swissquote label, direct accounts, no insiders)
+cl_retail = unique(Tab4ext$client)  %>%  .[!(. %in% insiders$client)] %>% 
+  .[(. %in% acc_types$client[acc_types$attr_val=='Direct client'])]
+
+# account_id_retail = unique(Tab4ext$account_id[Tab4ext$client %in% cl_retail])
+save(sty, insiders, persID, acc_types, Tab4ext, Closed_account, cl_retail,
+     file = 'basicdata.rda')
+```
+
+```{r loaddata, include = F, eval = F, echo = F}
+load('utrans_2001_2018.rda')
+
+optiontaders = u.trans[asset_type %in% c(67, 68), client] %>% unique
+
+gc()
+
+### only buy, sell and dividents
+u.trans2 = u.trans[client %in% cl_retail & 
+                     action %in% c('B','S','D', 
+                                   'A', # transfer securities in 
+                                   'C' # transfer securities out
+                                   ) & 
+                     security_key %in% sty$security_key[(sty$asset_type %in% c(30:32))]]
+
+gc()
+
+u.trans2$action %<>% as.character
+u.trans2$cur %<>% as.character
+u.trans2$symbol %<>% as.character
+u.trans2$isin %<>% as.character
+#u.trans=u.trans[!duplicated(u.trans[,c('trade_id','client','date_trans','isin')])]#%>%.[asset_type %in% c(30, 31, 32)]
+
+save(u.trans2, file = 'u.trans2.rda')
+```
+
+```{r loadmoredata, eval=F}
+load('u.trans2.rda')
+load('basicdata.rda')
+gc()
+# need clientdaily since 2001?
+clientdaily = readRDS('clientdaily.Rds')
+gc()
+```
+
+```{r eval=F}
+u.trans2[, ':='(
+  trade_id = NULL,
+  symbol = NULL,
+  asset_type = NULL,
+  stock_exchange = NULL,
+  isin = NULL
+)]
+
+## number of securities traded
+nsec = u.trans2[, c('client','security_key')] %>% unique %>% .$client %>% table
+
+## number of trades
+ntrade = u.trans2[, 'client'] %>% table
+
+## average trade per client
+meanvol = u.trans2[, list(mean_chf_tr=mean(vol_chf_trans)),by='client']
+
+## last seen trade
+last_trade = u.trans2[,list(last_tr=max(date_trans, na.rm = T)),by='client']
+first_trade = u.trans2[,list(first_tr=min(date_trans, na.rm = T)),by='client'] 
+
+# account value should not preceed account open date? 
+acct_start = merge(
+  Tab4ext[status_val == 'Open',list(first_open=min(acc_status_date, na.rm = T)),by= client],
+  clientdaily[, list(fist_status=min(account_date)), by = client]
+  , by = 'client', all = T)
+
+# `(acct_start$first_open - acct_start$fist_status >0) %>% which = integer(0)` so the next step does not matter that much -- we will always use first_open as acct_start
+acct_start[, acct_start:=pmin(first_open, fist_status, na.rm = T)]
+
+Closed_account %<>% merge(
+  clientdaily[, list(last_status=max(account_date)), by = client]
+  , by = 'client', all = T)
+
+# after spot checking, lest_status sometimes exceeds closing_date, which shouldn't have happened. We should use closing_date, and ignore records afterwards because those closed accounts' records appear inactive, becuase `(Tab4_lt$last_tr-Tab4_lt$closing_date >0) %>% which = integer(0)`
+Closed_account[, check:= closing_date - last_status]
+
+
+Tab4_lt = merge(first_trade,last_trade,all.x = T) %>% 
+  merge(Closed_account,all.x = T) %>% merge(acct_start, all.x = T)
+
+# attention --- first trade "A", magnitude, big transfer means history with other banks
+# for age and gender 
+pers = merge(persID[,c("account_id","birth_year",'title_label')],Tab4ext[,c("account_id","client")] %>% unique) %>% .[client %in% Tab4_lt$client]
+pers$gender = pers$title_label != 'Mr'
+
+# If last trade occurred after the recorded closing date, then use last trade date as closing date
+Tab4_lt$check = Tab4_lt$closing_date < Tab4_lt$last_tr
+Tab4_lt$closing_date[which(Tab4_lt$check)] = Tab4_lt$last_tr[which(Tab4_lt$check)]
+
+
+temp = merge(nsec,ntrade, by='.') %>%
+  setNames(c('client','nsec','ntrade')) %>%
+  merge(meanvol)
+temp$client %<>% as.character %>% as.integer
+regtable = merge(pers, temp, by = 'client') %>% 
+  merge(Tab4_lt[,c('client','first_tr', 'last_tr', 'acct_start','closing_date')], by = 'client')
+
+regtable[, ':='(firstobs = pmin(acct_start,first_tr, na.rm = T),
+                lastobs = ifelse(is.na(closing_date), last_tr, closing_date) %>% as.Date,
+                TradesOptions = as.numeric(client %in% optiontaders),
+                uncensored = ifelse(is.na(closing_date) , 0,1),
+                actualby = ifelse(  # actual birthyear
+                  first_tr %>% format('%Y') %>% as.numeric - birth_year > 12 & birth_year > 1900,
+                  birth_year, NA)
+                )][, ':='(bioage = 2018 - actualby, 
+                          enterage = as.numeric(format(first_tr,'%Y')) - actualby,
+                          lifetime = difftime(lastobs, first_tr, units = 'days')+0.25)]
+
+save(regtable, file = 'regtable.rda')
+
+write.csv(regtable, file = 'regtable.csv', row.names = F)
+```
+
+```{r eval=F}
+trint = merge(u.trans2[grep('B|S', action), c('client', 'date_trans', 'action', 'vol_chf_trans')],
+              regtable[, c('client', 'first_tr')], by = 'client')
+
+trint[, age:= as.integer(date_trans-first_tr)]
+```
+
+```{r eval=T}
+cols = c('yellow', 'grey', 'green', 'red')
+nrolls = c(7, 31, 91, 361)
+
+ctryrs = data.frame(
+  min = c(2001, 2001, 2007, 2010),
+  max = c(2018, 2006, 2009, 2018)
+)
+
+bs = c('B', 'S', 'B|S')
+
+par(mar=c(4,5,1.7,2), mgp = c(2, 0.8, 0))
+```
+
+```{r tradingintensitybyage, eval=F}
+TradingIntensityAge = vector("list", length = NROW(ctryrs))
+
+for (y in 1:NROW(ctryrs)){ # control for financial crisis
+  
+  ctryr = ctryrs[y,]
+  
+  temp0 = trint[format(date_trans, "%Y") >= ctryr$min & format(date_trans, "%Y") <= ctryr$max]
+  
+  temp2 = regtable[format(first_tr , "%Y") <= ctryr$max & format(lastobs, "%Y") >= ctryr$min, c('client', 'first_tr', 'lastobs', 'lifetime')]
+  
+  
+  TradingIntensityAge[[y]]$ctryr = ctryr
+  TradingIntensityAge[[y]]$bs = vector("list", length = NROW(bs))
+  
+  svft = survfit(Surv(time=lifetime, event=uncensored) ~ 1, data = regtable[
+    format(first_tr, "%Y") <= ctryr$max & format(lastobs, "%Y") >= ctryr$min
+    ])
+  
+  for (sel in 1:NROW(bs)){
+  temp1 = temp0[grepl(bs[sel], action)]
+  
+  trint1 = temp1
+  trint1[, ':='(
+    N = .N,
+    vol = sum(vol_chf_trans, na.rm = T)), by = 'age']
+  
+  trint1 = trint1[order(age), c('age','N', 'vol')] %>% unique
+  
+  nrisk = svft[['n.risk']] 
+  trint1$nrisk = approx(x = svft[['time']][nrisk] - 0.25, y = nrisk[nrisk],
+         xout = trint1$age)$y
+  
+  trint.ma = merge(data.table(age = 0:max(trint1$age)), trint1, all.x = T)
+  
+  for (nroll in nrolls){ # size of rolling window
+
+    trint.ma[, paste0('ra', nroll,'nrisk') := rollsum(
+        nrisk, nroll, na.rm = T, align = 'center', fill = NA)]
+    
+    trint.ma[, paste0('ra', nroll,'n') := rollsum(
+      N, nroll, na.rm = T, align = 'center', fill = NA)]
+    
+    trint.ma[, paste0('ra', nroll,'vol') := rollsum(
+      vol, nroll, na.rm = T, align = 'center', fill = NA)]
+    
+        
+    trint.ma[[paste0('ra', nroll,'uniqttl')]] = sapply(
+      trint.ma$age - (nroll-1)/2, function(i) sum(temp2$lifetime >= i, na.rm = T))
+    
+    temp = temp1[order(age),c('age', 'client', 'date_trans')] %>% unique
+    
+    trint.ma[[paste0('ra', nroll,'uniq')]] = rollapply(
+      trint.ma$age, nroll, function(i) uniqueN(temp[age %between% range(i),client]),
+      align = 'center', fill = NA)
+  }
+  
+  TradingIntensityAge[[y]][['bs']][[sel]] = trint.ma
+}
+}
+
+save(TradingIntensityAge, file = 'TradingIntensityAge.rda')
+```
+
+```{r tradingintensitybydate, eval=F}
+
+temp0 = data.table(date_trans = 
+                          (min(u.trans2$date_trans):max(u.trans2$date_trans)) %>% as.Date)
+temp0$nrisk = sapply(
+      temp0$date_trans, function(i) sum(
+        regtable$first_tr <=  i & regtable$lastobs >= i))
+
+temp2 = regtable[, c('client', 'first_tr', 'lastobs', 'lifetime')]
+
+TradingIntensityDate = vector("list", length = NROW(bs))
+
+for (sel in 1:NROW(bs)){
+  temp1 = trint[grep(bs[sel], action)]
+  
+  trint1 = temp1
+  
+  trint1[, ':='(
+    N = .N,
+    vol = sum(vol_chf_trans, na.rm = T)), by = 'date_trans']
+  
+  trint1 = trint1[order(date_trans), c('date_trans','N', 'vol')] %>% unique %>% merge(temp0)
+  
+  trint.ma = merge(data.table(date_trans = min(trint1$date_trans):max(trint1$date_trans)), 
+                   trint1, all.x = T, by = 'date_trans')
+  for (nroll in nrolls){ # size of rolling window
+    
+    trint.ma[, paste0('ra', nroll,'nrisk') := rollsum(
+        nrisk, nroll, na.rm = T, align = 'center', fill = NA)]
+    
+    trint.ma[, paste0('ra', nroll,'n') := rollsum(
+      N, nroll, na.rm = T, align = 'center', fill = NA)]
+    
+    trint.ma[, paste0('ra', nroll,'vol') := rollsum(
+      vol, nroll, na.rm = T, align = 'center', fill = NA)]
+    
+    trint.ma[[paste0('ra', nroll,'uniqttl')]] = rollapply(
+      trint.ma$date_trans, nroll, function(i) sum(
+        temp2$first_tr <= max(i) & temp2$lastobs >= min(i), na.rm = T),
+      align = 'center', fill = NA)
+    
+    temp = temp1[order(date_trans),c('age', 'client', 'date_trans')] %>% unique
+    
+    trint.ma[[paste0('ra', nroll,'uniq')]] = rollapply(
+      trint.ma$date_trans, nroll, function(i) uniqueN(temp[date_trans %between% range(i),client]),
+      align = 'center', fill = NA)
+    
+    print(nroll)
+  }
+  trint.ma$date_trans %<>% as.Date
+  TradingIntensityDate[[sel]] = trint.ma
+}
+
+save(TradingIntensityDate, file = 'TradingIntensityDate.rda')
+```
+
+```{r tradingintensity, eval=F}
+load('TradingIntensityAge.rda')
+load('TradingIntensityDate.rda')
+
+minage = 200
+maxage = 5800 # TradingIntensityAge[[1]][['bs']][[3]]$age %>% max
+maxn = 0.1
+maxchf = 1700
+
+bsttl = c('Buy trades only', 'Sell trades only', 'All (buy and sell) trades')
+
+for (y in 1:NROW(ctryrs)){ # control for financial crisis
+  for (sel in 1:NROW(bs)){
+    
+  trint.ma = TradingIntensityAge[[y]][['bs']][[sel]]
+  
+  # number
+  with(plot(age, get('ra7n')/get('ra7nrisk'), type = 'l', col = cols[1],
+       xlab = 'Trading age (days)',
+       ylab = 'Daily trading intensity\n(No. trades / day / active trader)',
+       xlim = c(minage, maxage),
+       ylim = c(0, maxn),
+       main = paste0(bsttl[sel], ', ', ctryrs$min[y], '--', ctryrs$max[y])),
+       data = trint.ma)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(age, get(paste0('ra',nrolls[x], 'n'))/get(paste0('ra',nrolls[x], 'nrisk')), col = cols[x]), data = trint.ma)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+  
+  # volume
+  with(plot(age, get('ra7vol')/get('ra7nrisk'), type = 'l', col = cols[1],
+       xlab = 'Trading age (days)',
+       ylab = 'Daily trading intensity\n(Volume (CHF) / day / active trader)',
+       xlim = c(minage, maxage),
+       ylim = c(0, maxchf),
+       main = paste0(bsttl[sel], ', ', ctryrs$min[y], '--', ctryrs$max[y])),
+       data = trint.ma)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(age, get(paste0('ra',nrolls[x], 'vol'))/get(paste0('ra',nrolls[x], 'nrisk')), col = cols[x]), data = trint.ma)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+  
+  # Likelihood
+  with(plot(age, get('ra7uniq')/get('ra7uniqttl'), type = 'l', col = cols[1],
+       xlab = 'Trading age (days)',
+       ylab = 'Trading likelihood within window\n(No. traders that traded / No. total active traders)',
+       xlim = c(minage, maxage),
+       ylim = c(0, 1),
+       main = paste0(bsttl[sel], ', ', ctryrs$min[y], '--', ctryrs$max[y])),
+       data = trint.ma)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(age, get(paste0('ra',nrolls[x], 'uniq'))/get(paste0('ra',nrolls[x], 'uniqttl')), col = cols[x]), data = trint.ma)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+  }
+}
+
+for (sel in 1:NROW(bs)){
+  trint.ma = TradingIntensityDate[[sel]]
+  
+  # number
+  with(plot(date_trans, get('ra7n')/get('ra7nrisk'), type = 'l', col = cols[1],
+       xlab = 'Calender date',
+       ylab = 'Daily trading intensity\n(No. trades / day / active trader)',
+       ylim = c(0, maxn),
+       main = bsttl[sel]),
+       data = trint.ma)
+  
+  
+  for (x in 2:length(nrolls)){
+    with(lines(date_trans, get(paste0('ra',nrolls[x], 'n'))/get(paste0('ra',nrolls[x], 'nrisk')), col = cols[x]), data = trint.ma)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+  
+  
+  # volume
+  with(plot(date_trans, get('ra7vol')/get('ra7nrisk'), type = 'l', col = cols[1],
+       xlab = 'Calender date',
+       ylab = 'Daily trading intensity\n(No. trades / day / active trader)',
+       ylim = c(0, maxchf),
+       main = bsttl[sel]),
+       data = trint.ma)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(date_trans, get(paste0('ra',nrolls[x], 'vol'))/get(paste0('ra',nrolls[x], 'nrisk')), col = cols[x]), data = trint.ma)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+
+  # Likelihood
+  with(plot(date_trans, get('ra7uniq')/get('ra7uniqttl'), type = 'l', col = cols[1],
+       xlab = 'Calender date',
+       ylab = 'Trading likelihood within window\n(No. traders that traded / No. total active traders)',
+       ylim = c(0, 1),
+       main = bsttl[sel]),
+       data = trint.ma)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(date_trans, get(paste0('ra',nrolls[x], 'uniq'))/get(paste0('ra',nrolls[x], 'uniqttl')), col = cols[x]), data = trint.ma)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+}
+
+```  
+  
+```{r dailyperf, eval=F}
+load('regtable.rda')
+
+clientdaily = merge(clientdaily, regtable[,c('client', 'closing_date','firstobs', 'lastobs', 'gender', 'birth_year', 'nsec', 'ntrade', 'TradesOptions')], by = 'client', all.x = T)
+
+clientdaily[, ':='(daily_perf_excess = daily_perf - smidailyret,
+                   age = account_date - firstobs)]
+
+# Takes forever
+clientdaily_matrixa = dcast(clientdaily[,c('client','age', 'daily_perf')], client ~ age, value.var = 'daily_perf')
+clientdaily_excs_matrixa = dcast(clientdaily, client ~ age, value.var = 'daily_perf_excess')
+
+
+clientdaily_matrix = dcast(clientdaily, client ~ account_date, value.var = 'daily_perf')
+clientdaily_excs_matrix = dcast(clientdaily, client ~ account_date, value.var = 'daily_perf_excess')
+
+
+retcala = cbind(colMeans(clientdaily_matrixa[, -1], na.rm=T),
+               colMeans(clientdaily_excs_matrixa[, -1], na.rm=T))
+
+retcal = cbind(colMeans(clientdaily_matrix[, -1], na.rm=T),
+               colMeans(clientdaily_excs_matrix[, -1], na.rm=T))
+
+save(retcala, retcal, file = 'retcal.rda')
+
+```  
+
+```{r returndist, eval=T}
+clientdaily[, nclient := .N, by=client]
+
+
+  for (nroll in nrolls){ # size of rolling window
+    
+    clientdaily[nclient>nroll, paste0('raprofit', nroll) := rollsum(
+        daily_perf_excess, nroll, na.rm = T, align = 'center', fill = NA), by = client]
+  }
+
+
+clientdaily[, exit := closing_date - account_date]
+
+sigstar = data.frame(thresh=c(0,0.01,0.05,0.1),stars=c('***','**','*',''))
+
+funcstar = function(p){
+  ss = p %>% lapply(function(x) which(x>=sigstar[,1]) %>% max %>% sigstar[.,2]) %>% unlist
+  ss[is.na(ss)]=''
+  ss
+}
+
+funks = function(series1,series2){
+  p = ks.test(series1, series2)$p
+  pf= formatC(p, digits = 3, format = 'f')
+  p2 = t.test(series1, series2, na.action=na.omit, alternative = 'two.sided', mu = 0, paired = F, conf.level = 0.95)$p.value
+  p2f = formatC(p2, digits = 3, format = 'f')
+  # p1 = p2/2
+  p1f = formatC(p1, digits = 3, format = 'f')
+  
+  corners = par("usr")
+  
+  mtext(paste0('KS-test: $p=',pf,'$',funcstar(p),
+               '\nt-test 1: $p=',p1f,'$',funcstar(p1)
+               # ,
+               # '\nt-test 2: $p=',p2f,'$',funcstar(p2)
+               ),side=3, line = 0, cex = 0.6)
+}
+
+textlabel <- function (posit,ser,farbe,xl,yl,xm){
+    if(posit == -1){xpo<- xm-0.99*(xl-xm)
+    lef=0}
+    else {xpo<- xl
+    lef=1}
+    text(xpo, yl, paste0('$n =', format(length(ser),big.mark=","),'$\r
+$\\mu =',round(mean(ser),3) %>% format(.,digits=3,nsmall=3,scientific =F, big.mark=','),'$\r
+$\\sigma =',round(sd(ser),3)%>% format(.,digits=3,nsmall=3,scientific =F, big.mark=','),'$\r
+$\\gamma =',round(skewness(ser),3)%>% format(.,digits=3,nsmall=3,scientific =F, big.mark=','),'$\r
+$\\kappa =',round(kurtosis(ser),3)%>% format(.,digits=3,nsmall=3,scientific =F, big.mark=','),'$'), cex = 0.7,col=farbe,xpd=NA, adj=c(lef,1))
+}
+
+
+for (nroll in nrolls[-1]){
+  colselect = paste0('raprofit', nroll)
+  temp = clientdaily[get(colselect) %>% is.finite()]
+  
+  agequants = temp$age %>% quantile(c(1/5, 4/5))
+  
+  ind1 = (temp$age > agequants[2]) %>% which
+  ind2 = (temp$age < agequants[1]) %>% which
+  
+  series1 = temp[[colselect]][ind1]
+  series2 = temp[[colselect]][ind2]
+  
+  series3 = temp[[colselect]][-c(ind1, ind2)]
+  
+  series1 %>% density(na.rm = T, n=29999) %>% plot(xlim=c(-1,1), 
+                                                 main = '', xlab = paste0(nroll, '-day return'))
+  
+  series2 %>% density(na.rm = T, n=29999) %>% lines(col='red')
+  
+  series3 %>% density(na.rm = T, n=29999) %>% lines(col='blue')
+
+# legend('topleft', legend = c('Expereiced (age top 20%)', 'Novice (age bottom 20%)'),lty = 1, col = c('black', 'red'))
+
+legend('topleft', legend = c('Expereiced (age top 20%)', 'Middle (age middle 60%)','Novice (age bottom 20%)'),lty = 1, col = c('black', 'blue','red'))
+legend('topright', legend = 'Aggregated', bty = 'n')
+
+funks(series1,series2)
+}
+
+
+selc = c('age', paste0('raprofit', nrolls))
+tempagg = clientdaily[, ..selc]
+
+ind1 = (clientdaily$account_date >= '2013-01-01') & (clientdaily$account_date <= '2013-12-31')
+ind2 = (clientdaily$account_date >= '2014-01-01') & (clientdaily$account_date <= '2014-12-31')
+ind3 = (clientdaily$account_date >= '2015-01-01') & (clientdaily$account_date <= '2015-12-31')
+ind4 = (clientdaily$account_date >= '2016-01-01') & (clientdaily$account_date <= '2016-12-31')
+
+ind5 = !clientdaily$gender # male
+ind6 = clientdaily$gender # female
+
+ind7 = clientdaily$TradesOptions == 0 #not trade options
+ind8 = clientdaily$TradesOptions == 1
+
+ind9 = clientdaily$nsec > 3 
+ind10 = clientdaily$nsec <= 3 
+
+ind11 = ind4 & ind5 & ind8 & ind10
+
+ind12 = clientdaily$exit < 91
+
+lbls = c(
+  'Year 2013',
+  'Year 2014',
+  'Year 2015',
+  'Year 2016',
+  'Male',
+  'Female',
+  'Option traders',
+  'Non-option traders',
+  '# securities > 3',
+  '# securities <= 3',
+  'Year 2016\nMale\nNon-option traders\n# securities <= 3',
+  'Exit'
+  )
+
+
+for (i in 0:length(lbls)){
+  temp0 = tempagg
+  if (i == 0){
+    lbl = 'Aggregated'
+  }else{
+    temp0 = tempagg[get(paste0('ind',i))]
+    lbl = lbls[i]
+  }
+for (nroll in nrolls[3:4]){
+  colselect = paste0('raprofit', nroll)
+  temp = temp0[get(colselect) %>% is.finite()]
+  agequants = temp$age %>% quantile(c(1/5, 4/5))
+  
+  ind1 = (temp$age > agequants[2]) %>% which
+  ind2 = (temp$age < agequants[1]) %>% which
+  
+  series1 = temp[[colselect]][ind1]
+  series2 = temp[[colselect]][ind2]
+  
+  series3 = temp[[colselect]][-c(ind1, ind2)]
+  
+# series1 = temp[age>quantile(age,0.66, na.rm = T),get(paste0('raprofit', nroll))] 
+# series2 = temp[age<quantile(age,0.33, na.rm = T),get(paste0('raprofit', nroll))] 
+# 
+# series3 = temp[age<=quantile(age,0.66, na.rm = T) & age>=quantile(age,0.33, na.rm = T),
+#                       get(paste0('raprofit', nroll))] 
+
+
+s3 = series3 %>% density(na.rm = T, n=29999) 
+  
+s1 = series1 %>% density(na.rm = T, n=29999) 
+
+s2 = series2 %>% density(na.rm = T, n=29999)
+
+
+s3 %>% plot(xlim=c(-1.4,1.4), col='blue', main = '', 
+            xlab = paste0(nroll, '-day return'), ylim = c(0, max(s1$y, s2$y, s3$y)))
+s1 %>% lines(col='black')
+s2 %>% lines(col='red')
+
+# legend('topleft', legend = c('Expereiced (age top 20%)', 'Novice (age bottom 20%)'),lty = 1, col = c('black', 'red'))
+
+legend('topleft', legend = c('Expereiced (age top 20%)', 'Middle (age middle 60%)','Novice (age bottom 20%)'),lty = 1, col = c('black', 'blue','red'))
+
+cortest = cor.test(temp$age %>% as.numeric(), temp[[colselect]])
+legend('topright', legend = lbl, bty = 'n', cex = 0.7)
+
+legend('right', 
+       legend = paste0('Corr(t, R): ', round(cortest$estimate, 3), funcstar(cortest$p.value)), 
+       bty = 'n', cex = 0.6)
+# 
+funks(series1,series2)
+}
+}
+
+# temp = u.trans_matched[profit<quantile(profit,0.99, na.rm = T)]
+# 
+# temp[age>quantile(age,0.9, na.rm = T)]$profit %>% density(na.rm = T) %>% plot
+# temp[age<quantile(age,0.1, na.rm = T)]$profit %>% density(na.rm = T) %>% lines(col='red')
+
+# [, ':='(n = sum(is.finite(profit)), profit = sum(profit)), by = age][,c('age', 'n', 'profit')] %>% unique
+
+
+# plot(temp$age, temp$raprofit361, cex = 0.1)
+
+```
+
+
+```{r performance, eval=T}
+load('retcal.rda')
+
+par(mar=c(4,5,1.7,2), mgp = c(2, 0.8, 0))
+
+rtnmain = c('Return', 'Excess return (return exceeding SMI)')
+
+age = retcala %>% rownames %>% as.numeric
+for (i in 1:NCOL(retcala)){
+  temp = retcala[,i]
+  plot(age , temp %>% rollmean(7, na.rm = T, align = 'center', fill = NA), type = 'l', col = cols[1],
+       ylim = c(-0.005,0.002),
+       xlab = 'Age',
+       ylab = 'Average daily log return\non account performance',
+       main = rtnmain[i])
+  for (x in 2:length(nrolls)){
+    lines(age, temp %>% rollmean(nrolls[x], na.rm = T, align = 'center', fill = NA), col = cols[x])
+    }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+}
+
+
+for (i in 1:NCOL(retcala)){
+  temp = retcala[,i]
+  plot(age , temp %>% rollsum(7, na.rm = T, align = 'center', fill = NA), type = 'l', col = cols[1],
+       ylim = c(-0.5,0.3),
+       xlab = 'Age',
+       ylab = 'Log return on account performance\nover rolling window period',
+       main = rtnmain[i])
+  for (x in 2:length(nrolls)){
+    lines(age, temp %>% rollsum(nrolls[x], na.rm = T, align = 'center', fill = NA), col = cols[x])
+    }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+}
+
+
+
+cal = rownames(retcal) %>% as.Date
+
+for (i in 1:NCOL(retcal)){
+  temp = retcal[,i]
+  plot(cal, temp %>% rollmean(7, na.rm = T, align = 'center', fill = NA), type = 'l', col = cols[1],
+       ylim = c(-0.01,0.01),
+       xlab = 'Calendar date',
+       ylab = 'Average daily log return\non account performance',
+       main = rtnmain[i])
+  for (x in 2:length(nrolls)){
+    lines(cal, temp %>% rollmean(nrolls[x], na.rm = T, align = 'center', fill = NA), col = cols[x])
+    }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+}
+
+
+for (i in 1:NCOL(retcal)){
+  temp = retcal[,i]
+  plot(cal, temp %>% rollsum(7, na.rm = T, align = 'center', fill = NA), type = 'l', col = cols[1],
+       ylim = c(-0.5,0.3),
+       xlab = 'Calendar date',
+       ylab = 'Log return on account performance\nover rolling window period',
+       main = rtnmain[i])
+  for (x in 2:length(nrolls)){
+    lines(cal, temp %>% rollsum(nrolls[x], na.rm = T, align = 'center', fill = NA), col = cols[x])
+    }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+}
+```  
+
+  
+```{r eval=T}
+first_sell=function(date1,action1){
+  options(warn = -1)
+  y=date1[action1=='S']
+  Mat=outer(date1,y,FUN=function(x,z){ifelse(z<x,Inf,z)})
+  ind=apply(Mat,1,FUN=function(x){min(x)})
+  return(as.Date(ind))
+}
+
+u.trans3=u.trans2[, list(qty_trans=sum(qty_trans),vol_chf_trans=sum(vol_chf_trans)), by=c('client','date_trans','action','security_key')]
+
+setkey(u.trans3, "client") #used for .(x) later
+registerDoMC(cores=15)
+u.trans_match = foreach(x=unique(u.trans3[action == 'B',client]), .combine="rbind") %dopar%
+           u.trans3[.(x), list(
+             client, date_trans, action, qty_trans, vol_chf_trans,
+             sell_date = first_sell(date_trans, action)), by = security_key]
+
+save(u.trans_match, file = 'u.trans_match.rda')
+```  
+  
+```{r eval=T}
+load('u.trans_match.rda')
+regtable = read.csv('regtable.csv')
+
+u.trans_match = u.trans_match[,price_chf := vol_chf_trans/qty_trans]
+
+inscope = sty[,c('sec_id','security_key')] %>% unique %>%
+  merge(u.trans_match[,c('client','security_key')] %>% unique)
+
+u.trans_sell = u.trans_match[action == 'S', !'date_trans']
+
+u.trans_matched = u.trans_match[action == 'B'] %>% 
+  merge(u.trans_sell[, action := NULL], suffixes = c(".buy",".sell"),
+        by =  c('security_key','client','sell_date'), all.x=T)
+
+regtable$firstobs %<>% as.Date
+u.trans_matched = merge(u.trans_matched, regtable[,c('client', 'firstobs')], by = 'client')
+
+u.trans_matched[, ':='(age = (date_trans - firstobs) %>% as.numeric,
+                       profit = price_chf.sell/price_chf.buy -1)]
+```  
+  
+```{r profitlikelihood, eval=T}
+thresh = 0.00
+temp = u.trans_matched[
+   , ':='(n = sum(is.finite(profit)), succount = sum(profit > thresh, na.rm = T)), by = age][,c('age', 'n', 'succount')] %>% unique
+temp = temp[order(age)]
+
+for (nroll in nrolls){ # size of rolling window
+  temp[, paste0('ma', nroll) := rollsum(
+    succount, nroll, na.rm = T, align = 'center', fill = NA)/rollsum(
+    n, nroll, na.rm = T, align = 'center', fill = NA)]
+}
+
+ with(plot(age, get('ma7'), type = 'l', col = cols[1],
+       xlab = 'Trading age (days)',
+       ylab = 'Success likelihood',
+       ylim = c(0.56, 0.69)
+       ),
+       data = temp)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(age, get(paste0('ma',nrolls[x])), col = cols[x]), data = temp)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+  
+
+```  
+
+```{r profit, eval=T}
+temp = u.trans_matched[profit<quantile(profit,0.999, na.rm = T)][, ':='(n = sum(is.finite(profit)), profit = sum(profit)), by = age][,c('age', 'n', 'profit')] %>% unique
+
+temp = temp[order(age)]
+
+for (nroll in nrolls){ # size of rolling window
+  temp[, paste0('ma', nroll) := rollsum(
+    profit, nroll, na.rm = T, align = 'center', fill = NA)/rollsum(
+    n, nroll, na.rm = T, align = 'center', fill = NA)]
+}
+
+ with(plot(age, get('ma7'), type = 'l', col = cols[1],
+       xlab = 'Trading age (days)',
+       ylab = 'Average profitability per age',
+       ylim = c(0, 0.1)
+       ),
+       data = temp)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(age, get(paste0('ma',nrolls[x])), col = cols[x]), data = temp)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+  
+
+selectyear = 2015
+temp = u.trans_matched[profit<quantile(profit,0.999, na.rm = T) & format(date_trans, '%Y') == selectyear
+                       ][, ':='(n = sum(is.finite(profit)), profit = sum(profit)), by = age][,c('age', 'n', 'profit')] %>% unique
+
+temp = temp[order(age)]
+
+for (nroll in nrolls){ # size of rolling window
+  temp[, paste0('ma', nroll) := rollsum(
+    profit, nroll, na.rm = T, align = 'center', fill = NA)/rollsum(
+    n, nroll, na.rm = T, align = 'center', fill = NA)]
+}
+
+ with(plot(age, get('ma7'), type = 'l', col = cols[1],
+       xlab = 'Trading age (days)',
+       ylab = 'Average profitability per age',
+       ylim = c(0.02, 0.16)
+       ),
+       data = temp)
+  
+  for (x in 2:length(nrolls)){
+    with(lines(age, get(paste0('ma',nrolls[x])), col = cols[x]), data = temp)
+  }
+  legend('top', col = cols, legend = nrolls, lty = 1, title = 'Rolling window size (days)', horiz = T)
+```
+
+```{r survcurvedef1, include = F, eval = F, echo = F}
+  svft = survfit(Surv(time=lifetime, event=uncensored) ~ 1, 
+                 data = regtable[
+                   format(first_tr, "%Y") <= ctryr$max & format(lastobs, "%Y") >= ctryr$min
+                   ])
+  
+  nrisk = svft[['n.risk']] 
+  trint1$nrisk = approx(x = svft[['time']][nrisk>4000] - 0.25, y = nrisk[nrisk>4000],
+         xout = trint1$age)$y
+  
+  
+ 
+  plot(svft[['time']], svft[['n.risk']],  col = 'red')
+  lines(trint1$age, trint1$nrisk)
+
+
+
+svft = survfit(Surv(time=lifetime, event=uncensored) ~ title_label, data = regtable)
+plot(svft, xaxs ='i', ylim = c(0,1), yaxs ='i', conf.int = F,
+     xlab = 'Trading experience since first trade (days)', ylab = 'survival rate')
+
+
+plot(survfit(Surv(
+  time=lifetime, event=uncensored
+  ) ~ title_label + TradesOptions, data = regtable),
+     xlim = c(0,6250), xaxs ='i', ylim = c(0,1), yaxs ='i', conf.int = F,
+     xlab = 'Trading experience since first trade (days)', ylab = 'survival rate')
+
+```
+
+```{r survcurveemp, include = F, eval = F, echo = F}
+load('u.trans3.rda')
+clientdaily = readRDS('clientdaily.Rds')
+
+regtable[, ':='(uncensored = ifelse(is.na(closing_date), 0,1), 
+                lastobs = ifelse(is.na(closing_date), last_tr,closing_date) %>% as.Date,
+                TradesOptions = as.numeric(client %in% optiontaders))][, ':='(
+                lifetime = difftime(lastobs, first_tr, units = 'days')+0.25,
+                enterage = as.numeric(format(first_tr,'%Y')) - actualby
+                )]
+
+# define subset of cohorts for survival plot
+subsets = list(
+  Aggregated = 1:NROW(regtable),
+  EnterBefore2008 = which(as.numeric(format(regtable$first_tr,'%Y')) < 2008),
+  EnterFrom2008To2010 = which(as.numeric(format(regtable$first_tr,'%Y')) >= 2008 & as.numeric(format(regtable$first_tr,'%Y')) <= 2010),
+  EnterAfter2010 = which(as.numeric(format(regtable$first_tr,'%Y')) > 2010),
+  EnterAgeBelow34 = which(regtable$enterage < 34),
+  EnterAgeFrom34To45 = which(regtable$enterage >= 34 & regtable$enterage <= 45),
+  EnterAgeAbove45 = which(regtable$enterage > 45),
+  OptionTrader = which(regtable$TradesOptions ==1),
+  NonOptionTrader = which(regtable$TradesOptions !=1),
+  Women = which(regtable$gender),
+  Men = which(!regtable$gender)
+)
+
+for (i in 1:length(subsets)){
+surtbl = regtable[subsets[[i]],]
+clientsurv = with(surtbl, Surv(lifetime,uncensored))
+
+par(bty = 'l')
+
+cssum = as.data.frame(summary(survfit(clientsurv ~ 1
+                              )))[c(
+  "time", "n.risk", "n.event", "surv", "std.err", "lower", "upper"
+  )])
+
+# coxph(Surv(lifetime,uncensored) ~ Rit60wt+smiret,data = surtbl)
+# temp = glm(Surv ~ Rit60wt + smiret,data = surtbl, family = binomial(link = "probit"))
+surtbl %<>% transform(mf = as.numeric(as.factor(title_label)))
+xlimax = rev(cssum$time)[4]
+# plot(clientsurv~1,
+plot(survfit(Surv(lifetime,uncensored) ~ title_label, data = surtbl),
+     ylim = c(0,1), xlim = c(0,xlimax),xaxs ='i', yaxs ='i', conf.int = F,
+     xlab = 'Trading experience since first trade (days)', ylab = 'survival rate')
+
+# plot(survfit(Surv(lifetime,uncensored) ~ 1, data = surtbl),
+#      ylim = c(0,1), xlim = c(0,xlimax),xaxs ='i', yaxs ='i', conf.int = F,
+#                     xlab = 'Trading experience since first trade (days)', ylab = 'survival rate')
+
+
+nlag = 60
+cssum$slope = c(rep(NA,nlag/2), diff(cssum$surv,lag=nlag)/diff(cssum$time,lag=nlag), rep(NA,nlag/2))
+cssum$intercept = cssum$surv - cssum$slope*cssum$time
+cssum = cssum[-NROW(cssum)+(0:1),]
+
+abline(h=0.5, col = 'red',lwd = 0.5)
+
+avgrate = (min(cssum$surv)-1)/max(cssum$time)
+abline(a=1, b=avgrate, col = 'blue')
+temp = which.max(cssum$slope)
+
+linelen = xlimax/10
+segments(x0=cssum$time[temp] - linelen, y0 = cssum$surv[temp] - linelen * cssum$slope[temp], 
+        x1 = cssum$time[temp] + linelen, y1 = cssum$surv[temp] + linelen * cssum$slope[temp],
+        col = 'violet')
+
+text(labels = paste0('experience: ',cssum$time[temp], ' days\nexit rate: ', round(100*cssum$slope[temp],4), '% / day'),
+     x=cssum$time[temp]+1050, y = cssum$surv[temp], adj = c(0,0), xpd = T)
+
+temp = which.min(cssum$slope)
+segments(x0=cssum$time[temp] - linelen, y0 = cssum$surv[temp] - linelen * cssum$slope[temp], 
+        x1 = cssum$time[temp] + linelen, y1 = cssum$surv[temp] + linelen * cssum$slope[temp],
+        col = 'violet')
+
+text(labels = paste0('experience: ',cssum$time[temp], ' days\nexit rate: ', round(100*cssum$slope[temp],4), '% / day'),
+     x=cssum$time[temp], y = cssum$surv[temp], adj = c(1,1))
+
+legend('topright', legend = paste0(names(subsets)[i], '\n# obs: ',NROW(surtbl)), bty = 'n', text.col = 'grey30', cex = 1.2)
+legend('bottomleft', legend = c(
+  '90% confidence interval', 'empirical survival', paste0(
+    'average exit rate\n(age 0 - ', max(cssum$time), ' days): ', round(100*avgrate,4), '% / day'
+    )), lty = c(2,1,1), col = c('black','black','blue'),bty = 'n'
+)
+}
+
+```
