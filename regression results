@@ -16,3 +16,108 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 Residual standard error: 0.1936 on 362875 degrees of freedom
 Multiple R-squared:  0.0003111,	Adjusted R-squared:  0.0003083 
 F-statistic: 112.9 on 1 and 362875 DF,  p-value: < 2.2e-16
+
+Call:
+lm(formula = ret_25 ~ factor(gender), data = test_purged2)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.59547 -0.07172  0.00170  0.06473  1.29161 
+
+Coefficients:
+                   Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       0.0206988  0.0003425  60.439  < 2e-16 ***
+factor(gender)Mrs 0.0062998  0.0009858   6.391 1.66e-10 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1829 on 324274 degrees of freedom
+Multiple R-squared:  0.0001259,	Adjusted R-squared:  0.0001228 
+F-statistic: 40.84 on 1 and 324274 DF,  p-value: 1.655e-10
+
+> summary(model4)
+
+Call:
+lm(formula = ret_70 ~ factor(gender), data = test_purged)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-2.1639 -0.1083  0.0288  0.1353  2.2487 
+
+Coefficients:
+                   Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       -0.018270   0.000521  -35.06   <2e-16 ***
+factor(gender)Mrs  0.028970   0.001509   19.20   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2905 on 352983 degrees of freedom
+Multiple R-squared:  0.001043,	Adjusted R-squared:  0.00104 
+F-statistic: 368.6 on 1 and 352983 DF,  p-value: < 2.2e-16
+
+> summary(model5)
+
+Call:
+lm(formula = ret_70 ~ factor(gender), data = test_purged2)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.14990 -0.10149  0.02675  0.12640  1.68743 
+
+Coefficients:
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       -0.0033155  0.0005258  -6.306 2.87e-10 ***
+factor(gender)Mrs  0.0243582  0.0015135  16.094  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2808 on 324274 degrees of freedom
+Multiple R-squared:  0.0007981,	Adjusted R-squared:  0.0007951 
+F-statistic:   259 on 1 and 324274 DF,  p-value: < 2.2e-16
+
+> summyr(model6)
+Error in summyr(model6) : could not find function "summyr"
+> summary(model6)
+
+Call:
+lm(formula = ret_250 ~ factor(gender), data = test_purged)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.3755 -0.2087  0.0749  0.3155  2.3900 
+
+Coefficients:
+                   Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       -0.178365   0.001031 -173.03   <2e-16 ***
+factor(gender)Mrs  0.065000   0.002986   21.77   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.5748 on 352983 degrees of freedom
+Multiple R-squared:  0.001341,	Adjusted R-squared:  0.001338 
+F-statistic:   474 on 1 and 352983 DF,  p-value: < 2.2e-16
+
+> summary(model7)
+Error in summary(model7) : object 'model7' not found
+> model7<- lm(ret_250~factor(gender), data = test_purged2)
+> summary(model7)
+
+Call:
+lm(formula = ret_250 ~ factor(gender), data = test_purged2)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.2149 -0.2003  0.0836  0.3064  2.6050 
+
+Coefficients:
+                   Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       -0.165842   0.001061 -156.38   <2e-16 ***
+factor(gender)Mrs  0.058022   0.003053   19.01   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.5663 on 324274 degrees of freedom
+Multiple R-squared:  0.001113,	Adjusted R-squared:  0.00111 
+F-statistic: 361.3 on 1 and 324274 DF,  p-value: < 2.2e-16
+
+
