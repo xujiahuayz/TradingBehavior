@@ -1,0 +1,101 @@
+Call:
+lm(formula = fut_ret_measure_1 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-3.07845 -0.01155  0.00115  0.01303  3.14606 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -1.352e-03  5.673e-05 -23.826  < 2e-16 ***
+factor(title_label)Mrs                  4.877e-04  1.617e-04   3.016  0.00256 ** 
+ret_measure_250                        -1.291e-03  8.835e-05 -14.616  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250  5.532e-04  2.509e-04   2.204  0.02750 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.04385 on 702227 degrees of freedom
+Multiple R-squared:  0.0003272,	Adjusted R-squared:  0.0003229 
+F-statistic: 76.61 on 3 and 702227 DF,  p-value: < 2.2e-16
+
+> 
+> # regression on future returns over 5 days
+> 
+> model2<- lm(fut_ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp2.no.na)
+> summary(model2)
+
+Call:
+lm(formula = fut_ret_measure_5 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.8999 -0.0266  0.0045  0.0309  3.1824 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -5.041e-03  1.077e-04 -46.813   <2e-16 ***
+factor(title_label)Mrs                  8.968e-05  3.069e-04   0.292     0.77    
+ret_measure_250                        -3.593e-03  1.677e-04 -21.424   <2e-16 ***
+factor(title_label)Mrs:ret_measure_250  4.442e-03  4.763e-04   9.325   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.08323 on 702227 degrees of freedom
+Multiple R-squared:  0.0006607,	Adjusted R-squared:  0.0006564 
+F-statistic: 154.8 on 3 and 702227 DF,  p-value: < 2.2e-16
+
+> 
+> # regression on future returns over 25 days
+> 
+> model3<- lm(fut_ret_measure_25 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = tmp2.no.na)
+> summary(model3)
+
+Call:
+lm(formula = fut_ret_measure_25 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.9090 -0.0589  0.0127  0.0736  3.2026 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0192586  0.0002056  -93.68  < 2e-16 ***
+factor(title_label)Mrs                 -0.0022969  0.0005859   -3.92 8.85e-05 ***
+ret_measure_250                        -0.0075698  0.0003201  -23.65  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0153822  0.0009093   16.92  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1589 on 702227 degrees of freedom
+Multiple R-squared:  0.000977,	Adjusted R-squared:  0.0009727 
+F-statistic: 228.9 on 3 and 702227 DF,  p-value: < 2.2e-16
+
+> 
+> #regression on future retunrs over a 70 day period
+> 
+> model4<- lm(fut_ret_measure_70~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250, data = tmp2.no.na)
+> summary(model4)
+
+Call:
+lm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.6058 -0.0990  0.0286  0.1286  3.3198 
+
+Coefficients:
+                                         Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                            -0.0374898  0.0003191 -117.495  < 2e-16 ***
+factor(title_label)Mrs                 -0.0024879  0.0009094   -2.736  0.00622 ** 
+ret_measure_250                        -0.0205177  0.0004969  -41.293  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0140757  0.0014113    9.974  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2466 on 702227 degrees of freedom
+Multiple R-squared:  0.002488,	Adjusted R-squared:  0.002484 
+F-statistic: 583.8 on 3 and 702227 DF,  p-value: < 2.2e-16
