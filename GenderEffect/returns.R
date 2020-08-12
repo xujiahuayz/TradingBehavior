@@ -11,7 +11,8 @@ library(hrbrthemes)
 library(ggpubr)
 install.packages("gtools")
 library(gtools)
-
+install.packages("lubridate")
+library(lubridate)
 file<- "/home//qam/return_set15_19.csv"
 returns <- fread(file)
 
@@ -417,3 +418,35 @@ model15<- lm(fut_ret_measure_250~factor(title_label) + x+ factor(title_label)* x
 summary(model15)
 model15<- lm(fut_ret_measure_250~factor(title_label) + z+ factor(title_label)* z,data = dataSet)
 summary(model15)
+
+
+### Creating a dollar neutral portfolio 
+
+#grouping data by months
+
+D<-data.table(total_data)
+
+months<-setDT(D)[, months_years := format(as.Date(c(D$close_date)), "%Y-%m") ]
+
+totalData <- (cbind(D, months))
+as.data.table(totalData)
+table1<- unique(totalData[,. (client,title_label, months_years, isin)])
+
+table1[,sumWomen:= .N , by = .(months_years,title_label)][title_label == "Mrs"]
+table1[,sumMen:= .N , by = .(months_years,title_label)][title_label == "Mr"]
+
+tmp = table1[,.(client, title_label, months_years, isin )]
+tmp[, cnt:= .N , by = .(months_years,title_label, isin)]
+tmp = tmp[,.(months_years, isin, title_label, cnt)]%>%unique()
+tmp2 = dcast(tmp, months_years  + isin ~ title_label, value.var = 'cnt')
+tmp2[is.na(tmp2)] <- 0
+
+table2<- table1[,.(client, title_label, months_years, isin )]
+table2[, count:= .N , by = .(months_years,title_label)]
+table2 = table2[,.(months_years,title_label, count)]%>%unique()
+newTable2 = dcast(table2, months_years   ~ title_label, value.var = 'count')
+newTable2[is.na(newTable2)] <- 0
+
+as.data.table(newTable2)
+
+
