@@ -1,0 +1,305 @@
+# regression on past returns over a day
+> 
+> model1<- lm(ret_measure_1 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp2.no.na)
+> model2<- lm(ret_measure_1 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp3.no.na)
+> model3<- lm(ret_measure_1 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = total_data3)
+> summary(model1)
+
+Call:
+lm(formula = ret_measure_1 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.9441 -0.0188 -0.0060  0.0102  4.1111 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0086815  0.0001345  64.535  < 2e-16 ***
+factor(title_label)Mrs                  0.0004770  0.0003889   1.227     0.22    
+ret_measure_250                         0.0084576  0.0002108  40.127  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0043163  0.0006929  -6.229 4.69e-10 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.08659 on 472286 degrees of freedom
+  (204057 observations deleted due to missingness)
+Multiple R-squared:  0.003484,	Adjusted R-squared:  0.003477 
+F-statistic: 550.4 on 3 and 472286 DF,  p-value: < 2.2e-16
+
+> summary(model2)
+
+Call:
+lm(formula = ret_measure_1 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp3.no.na)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.49157 -0.01822 -0.00303  0.01189  2.27102 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0055065  0.0001484  37.100  < 2e-16 ***
+factor(title_label)Mrs                 -0.0021613  0.0004222  -5.119 3.08e-07 ***
+ret_measure_250                         0.0056974  0.0002436  23.384  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0005944  0.0006976   0.852    0.394    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.07364 on 284212 degrees of freedom
+Multiple R-squared:  0.002328,	Adjusted R-squared:  0.002317 
+F-statistic:   221 on 3 and 284212 DF,  p-value: < 2.2e-16
+
+> summary(model3)
+
+Call:
+lm(formula = ret_measure_1 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data3)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.9429 -0.0185 -0.0049  0.0108  4.1098 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0075566  0.0001006  75.138  < 2e-16 ***
+factor(title_label)Mrs                 -0.0006700  0.0002887  -2.321   0.0203 *  
+ret_measure_250                         0.0076715  0.0001603  47.866  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0021760  0.0004987  -4.363 1.28e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.08198 on 756502 degrees of freedom
+  (204057 observations deleted due to missingness)
+Multiple R-squared:  0.003201,	Adjusted R-squared:  0.003197 
+F-statistic: 809.9 on 3 and 756502 DF,  p-value: < 2.2e-16
+
+> 
+> # regression on past returns over 5 days
+> 
+> model4<- lm(ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp2.no.na)
+> model5<- lm(ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp3.no.na)
+> model6<- lm(ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = total_data3)
+> summary(model4)
+
+Call:
+lm(formula = ret_measure_5 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.3632 -0.0437 -0.0129  0.0248  4.0680 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0225042  0.0002303  97.716  < 2e-16 ***
+factor(title_label)Mrs                 -0.0027885  0.0006658  -4.188 2.81e-05 ***
+ret_measure_250                         0.0322023  0.0003608  89.245  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0040005  0.0011862  -3.372 0.000745 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1482 on 472286 degrees of freedom
+  (204057 observations deleted due to missingness)
+Multiple R-squared:  0.01788,	Adjusted R-squared:  0.01787 
+F-statistic:  2866 on 3 and 472286 DF,  p-value: < 2.2e-16
+
+> summary(model5)
+
+Call:
+lm(formula = ret_measure_5 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp3.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.9980 -0.0408 -0.0035  0.0306  3.3661 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0112887  0.0002651  42.582  < 2e-16 ***
+factor(title_label)Mrs                 -0.0038689  0.0007542  -5.130  2.9e-07 ***
+ret_measure_250                         0.0261118  0.0004352  60.003  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0008087  0.0012460  -0.649    0.516    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1315 on 284212 degrees of freedom
+Multiple R-squared:  0.01418,	Adjusted R-squared:  0.01417 
+F-statistic:  1363 on 3 and 284212 DF,  p-value: < 2.2e-16
+
+> summary(model6)
+
+Call:
+lm(formula = ret_measure_5 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data3)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.3585 -0.0424 -0.0094  0.0268  4.0761 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0184444  0.0001746 105.662  < 2e-16 ***
+factor(title_label)Mrs                 -0.0033414  0.0005011  -6.668  2.6e-11 ***
+ret_measure_250                         0.0307181  0.0002782 110.425  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0028125  0.0008656  -3.249  0.00116 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1423 on 756502 degrees of freedom
+  (204057 observations deleted due to missingness)
+Multiple R-squared:  0.01738,	Adjusted R-squared:  0.01737 
+F-statistic:  4459 on 3 and 756502 DF,  p-value: < 2.2e-16
+
+> 
+> # regression on past returns over 25 days
+> 
+> model7<- lm(ret_measure_25 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = tmp2.no.na)
+> model8<- lm(ret_measure_25 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp3.no.na)
+> model9<- lm(ret_measure_25 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = total_data3)
+> summary(model7)
+
+Call:
+lm(formula = ret_measure_25 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.4864 -0.0827 -0.0200  0.0568  3.8139 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0402265  0.0003445 116.771  < 2e-16 ***
+factor(title_label)Mrs                 -0.0067142  0.0009959  -6.742 1.57e-11 ***
+ret_measure_250                         0.1414638  0.0005397 262.099  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0081010  0.0017744  -4.565 4.99e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2217 on 472286 degrees of freedom
+  (204057 observations deleted due to missingness)
+Multiple R-squared:  0.1369,	Adjusted R-squared:  0.1369 
+F-statistic: 2.498e+04 on 3 and 472286 DF,  p-value: < 2.2e-16
+
+> summary(model8)
+
+Call:
+lm(formula = ret_measure_25 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp3.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-3.7119 -0.0785 -0.0046  0.0650  3.0304 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0188758  0.0004196  44.983  < 2e-16 ***
+factor(title_label)Mrs                 -0.0046637  0.0011937  -3.907 9.35e-05 ***
+ret_measure_250                         0.1089089  0.0006888 158.109  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0081182  0.0019722   4.116 3.85e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2082 on 284212 degrees of freedom
+Multiple R-squared:  0.09262,	Adjusted R-squared:  0.09261 
+F-statistic:  9671 on 3 and 284212 DF,  p-value: < 2.2e-16
+
+> summary(model9)
+
+Call:
+lm(formula = ret_measure_25 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data3)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.5721 -0.0807 -0.0144  0.0597  3.8494 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                             0.0329917  0.0002664 123.848   <2e-16 ***
+factor(title_label)Mrs                 -0.0064146  0.0007647  -8.388   <2e-16 ***
+ret_measure_250                         0.1312354  0.0004245 309.140   <2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0033393  0.0013209  -2.528   0.0115 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2172 on 756502 degrees of freedom
+  (204057 observations deleted due to missingness)
+Multiple R-squared:  0.1229,	Adjusted R-squared:  0.1229 
+F-statistic: 3.535e+04 on 3 and 756502 DF,  p-value: < 2.2e-16
+
+> #regression on past retunrs over a 70 day period
+> 
+> model10<- lm(fut_ret_measure_70~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250, data = tmp2.no.na)
+> model11<- lm(fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + factor(title_label)*ret_measure_250, data = tmp3.no.na)
+> model12<- lm(fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = total_data3)
+> summary(model10)
+
+Call:
+lm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp2.no.na)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-15.2564  -0.0867   0.0200   0.1177   7.1466 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0097040  0.0004791 -20.253  < 2e-16 ***
+factor(title_label)Mrs                  0.0063030  0.0013854   4.550 5.38e-06 ***
+ret_measure_250                         0.0480331  0.0007513  63.931  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0182743  0.0024769  -7.378 1.61e-13 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3084 on 472253 degrees of freedom
+  (204090 observations deleted due to missingness)
+Multiple R-squared:  0.00896,	Adjusted R-squared:  0.008954 
+F-statistic:  1423 on 3 and 472253 DF,  p-value: < 2.2e-16
+
+> summary(model11)
+
+Call:
+lm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = tmp3.no.na)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.6038 -0.0966  0.0304  0.1264  3.1912 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0385636  0.0004831 -79.824   <2e-16 ***
+factor(title_label)Mrs                  0.0025092  0.0013743   1.826   0.0679 .  
+ret_measure_250                        -0.0200627  0.0007930 -25.299   <2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0037367  0.0022706   1.646   0.0998 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2397 on 284212 degrees of freedom
+Multiple R-squared:  0.002459,	Adjusted R-squared:  0.002449 
+F-statistic: 233.6 on 3 and 284212 DF,  p-value: < 2.2e-16
+
+> summary(model12)
+
+Call:
+lm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data3)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-15.2752  -0.0893   0.0249   0.1205   7.1591 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0189142  0.0003502 -54.004  < 2e-16 ***
+factor(title_label)Mrs                  0.0042637  0.0010055   4.241 2.23e-05 ***
+ret_measure_250                         0.0256760  0.0005584  45.978  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -0.0130569  0.0017402  -7.503 6.24e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2855 on 756469 degrees of freedom
+  (204090 observations deleted due to missingness)
+Multiple R-squared:  0.002893,	Adjusted R-squared:  0.002889 
+F-statistic: 731.5 on 3 and 756469 DF,  p-value: < 2.2e-16
