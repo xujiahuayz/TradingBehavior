@@ -1,290 +1,307 @@
-x = c(newTotalData$ret_measure_250)
->  x[x>0] <-1
->  x[x<=0] <-0
-> 
->  x<-x
->  
->  z = c(newTotalData$ret_measure_70)
->  z[z>0] <-1
->  z[z<=0]<-0
->  
->  z<- z
->  
->  ### adding these vectors to the data set
->  
->  new.df <- data.frame(
-+    +  x,
-+    + z)
->  
->  dataSet <- (cbind(newTotalData, new.df))
->  
->  
->  ### regressions over 1 day
->  
-> model3<- lm(fut_ret_measure_1 ~ factor(title_label) + x + factor(title_label)* x, data = dataSet)
+model3<- glm(fut_ret_measure_1 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = total_data4)
 > summary(model3)
 
 Call:
-lm(formula = fut_ret_measure_1 ~ factor(title_label) + x + factor(title_label) * 
-    x, data = dataSet)
+glm(formula = fut_ret_measure_1 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data4)
 
-Residuals:
-    Min      1Q  Median      3Q     Max 
--4.6039 -0.0109  0.0011  0.0124  4.7601 
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-8.2293  -0.0115   0.0013   0.0131   3.9479  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -1.319e-03  7.839e-05 -16.828  < 2e-16 ***
-factor(title_label)Mrs    6.085e-04  2.322e-04   2.620  0.00878 ** 
-x                         5.544e-04  1.111e-04   4.992 5.96e-07 ***
-factor(title_label)Mrs:x  6.274e-05  3.214e-04   0.195  0.84523    
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -1.417e-03  5.609e-05 -25.267  < 2e-16 ***
+factor(title_label)Mrs                  3.001e-04  1.621e-04   1.851   0.0641 .  
+ret_measure_250                         1.768e-03  8.226e-05  21.496  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250 -1.234e-03  2.514e-04  -4.907 9.26e-07 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.04881 on 877884 degrees of freedom
-  (204059 observations deleted due to missingness)
-Multiple R-squared:  5.22e-05,	Adjusted R-squared:  4.879e-05 
-F-statistic: 15.28 on 3 and 877884 DF,  p-value: 6.167e-10
+(Dispersion parameter for gaussian family taken to be 0.002834437)
 
-> model3<- lm(fut_ret_measure_1 ~ factor(title_label) + z + factor(title_label)* z, data = dataSet)
+    Null deviance: 2933.6  on 1034522  degrees of freedom
+Residual deviance: 2932.3  on 1034519  degrees of freedom
+  (292029 observations deleted due to missingness)
+AIC: -3132566
+
+Number of Fisher Scoring iterations: 2
+
+> model3<- glm(fut_ret_measure_1 ~ factor(title_label) + ret_measure_70 + factor(title_label)* ret_measure_70, data = total_data4)
 > summary(model3)
 
 Call:
-lm(formula = fut_ret_measure_1 ~ factor(title_label) + z + factor(title_label) * 
-    z, data = dataSet)
+glm(formula = fut_ret_measure_1 ~ factor(title_label) + ret_measure_70 + 
+    factor(title_label) * ret_measure_70, data = total_data4)
 
-Residuals:
-    Min      1Q  Median      3Q     Max 
--5.9498 -0.0110  0.0010  0.0126  4.7609 
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-8.9486  -0.0116   0.0015   0.0137   3.9472  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -8.084e-04  7.785e-05 -10.384  < 2e-16 ***
-factor(title_label)Mrs    1.329e-04  2.291e-04   0.580 0.561846    
-z                        -7.869e-04  1.078e-04  -7.300 2.88e-13 ***
-factor(title_label)Mrs:z  1.073e-03  3.132e-04   3.425 0.000615 ***
+                                        Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                           -1.893e-03  5.353e-05 -35.361  < 2e-16 ***
+factor(title_label)Mrs                 6.740e-04  1.555e-04   4.335 1.45e-05 ***
+ret_measure_70                        -2.110e-03  1.355e-04 -15.567  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70  1.382e-03  4.251e-04   3.251  0.00115 ** 
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.05081 on 1010270 degrees of freedom
-  (71673 observations deleted due to missingness)
-Multiple R-squared:  7.337e-05,	Adjusted R-squared:  7.04e-05 
-F-statistic: 24.71 on 3 and 1010270 DF,  p-value: 5.585e-16
+(Dispersion parameter for gaussian family taken to be 0.003047753)
+
+    Null deviance: 3701.4  on 1214207  degrees of freedom
+Residual deviance: 3700.6  on 1214204  degrees of freedom
+  (112344 observations deleted due to missingness)
+AIC: -3588554
+
+Number of Fisher Scoring iterations: 2
 
 > 
 > # regression on future returns over 5 days
 > 
 > 
-> model6<- lm(fut_ret_measure_5 ~ factor(title_label) + x + factor(title_label)* x, data = dataSet)
+> model6<- glm(fut_ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label)* ret_measure_250, data = total_data4)
 > summary(model6)
 
 Call:
-lm(formula = fut_ret_measure_5 ~ factor(title_label) + x + factor(title_label) * 
-    x, data = dataSet)
+glm(formula = fut_ret_measure_5 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--10.2455  -0.0250   0.0041   0.0301   5.2713 
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-8.6125  -0.0262   0.0045   0.0317   4.9095  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -0.0051517  0.0001523 -33.819   <2e-16 ***
-factor(title_label)Mrs   -0.0001784  0.0004513  -0.395   0.6925    
-x                         0.0025425  0.0002158  11.783   <2e-16 ***
-factor(title_label)Mrs:x  0.0014077  0.0006246   2.254   0.0242 *  
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0043402  0.0001049 -41.362   <2e-16 ***
+factor(title_label)Mrs                  0.0005880  0.0003032   1.939   0.0525 .  
+ret_measure_250                         0.0037457  0.0001539  24.332   <2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0001362  0.0004707   0.289   0.7723    
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.09485 on 877871 degrees of freedom
-  (204072 observations deleted due to missingness)
-Multiple R-squared:  0.0002145,	Adjusted R-squared:  0.0002111 
-F-statistic: 62.78 on 3 and 877871 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.009920794)
+
+    Null deviance: 10270  on 1034501  degrees of freedom
+Residual deviance: 10263  on 1034498  degrees of freedom
+  (292050 observations deleted due to missingness)
+AIC: -1836489
+
+Number of Fisher Scoring iterations: 2
 
 > 
-> model6<- lm(fut_ret_measure_5~ factor(title_label) + z+factor(title_label)* z, data = dataSet)
+> model6<- glm(fut_ret_measure_5~ factor(title_label) + ret_measure_70+factor(title_label)* ret_measure_70, data = total_data4)
 > summary(model6)
 
 Call:
-lm(formula = fut_ret_measure_5 ~ factor(title_label) + z + factor(title_label) * 
-    z, data = dataSet)
+glm(formula = fut_ret_measure_5 ~ factor(title_label) + ret_measure_70 + 
+    factor(title_label) * ret_measure_70, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--11.0024  -0.0249   0.0041   0.0305   6.1138 
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-9.6189  -0.0262   0.0050   0.0326   4.9042  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -0.0041454  0.0001510 -27.453  < 2e-16 ***
-factor(title_label)Mrs   -0.0004493  0.0004443  -1.011  0.31195    
-z                        -0.0006148  0.0002091  -2.941  0.00328 ** 
-factor(title_label)Mrs:z  0.0025557  0.0006075   4.207 2.59e-05 ***
+                                        Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                           -0.0056511  0.0001002 -56.385  < 2e-16 ***
+factor(title_label)Mrs                 0.0011115  0.0002910   3.819 0.000134 ***
+ret_measure_70                        -0.0069295  0.0002538 -27.301  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70  0.0053388  0.0007965   6.703 2.05e-11 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.09855 on 1010257 degrees of freedom
-  (71686 observations deleted due to missingness)
-Multiple R-squared:  2.901e-05,	Adjusted R-squared:  2.604e-05 
-F-statistic: 9.771 on 3 and 1010257 DF,  p-value: 1.926e-06
+(Dispersion parameter for gaussian family taken to be 0.01068177)
+
+    Null deviance: 12978  on 1214186  degrees of freedom
+Residual deviance: 12970  on 1214183  degrees of freedom
+  (112365 observations deleted due to missingness)
+AIC: -2065739
+
+Number of Fisher Scoring iterations: 2
 
 > 
 > # regression on future returns over 25 days
 > 
 > 
-> model9<- lm(fut_ret_measure_25 ~ factor(title_label) + x+ factor(title_label)*x, data = dataSet)
+> model9<- glm(fut_ret_measure_25 ~ factor(title_label) + ret_measure_250+ factor(title_label)*ret_measure_250, data = total_data4)
 > summary(model9)
 
 Call:
-lm(formula = fut_ret_measure_25 ~ factor(title_label) + x + factor(title_label) * 
-    x, data = dataSet)
+glm(formula = fut_ret_measure_25 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--14.9837  -0.0566   0.0106   0.0706   4.8489 
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-14.9687   -0.0586    0.0111    0.0727    7.2996  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -0.0165666  0.0002969 -55.799  < 2e-16 ***
-factor(title_label)Mrs   -0.0056323  0.0008795  -6.404 1.52e-10 ***
-x                         0.0115379  0.0004206  27.435  < 2e-16 ***
-factor(title_label)Mrs:x  0.0070022  0.0012173   5.752 8.80e-09 ***
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0101889  0.0002019 -50.454   <2e-16 ***
+factor(title_label)Mrs                 -0.0011201  0.0005835  -1.920   0.0549 .  
+ret_measure_250                         0.0135446  0.0002963  45.708   <2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0076998  0.0009061   8.497   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.1849 on 877863 degrees of freedom
-  (204080 observations deleted due to missingness)
-Multiple R-squared:  0.001164,	Adjusted R-squared:  0.001161 
-F-statistic: 341.1 on 3 and 877863 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.03674528)
+
+    Null deviance: 38112  on 1034491  degrees of freedom
+Residual deviance: 38013  on 1034488  degrees of freedom
+  (292060 observations deleted due to missingness)
+AIC: -481931
+
+Number of Fisher Scoring iterations: 2
 
 > 
-> model9<- lm(fut_ret_measure_25~ factor(title_label) + z+ factor(title_label)* z, data = dataSet)
+> model9<- glm(fut_ret_measure_25~ factor(title_label) + ret_measure_70+ factor(title_label)* ret_measure_70, data = total_data4)
 > summary(model9)
 
 Call:
-lm(formula = fut_ret_measure_25 ~ factor(title_label) + z + factor(title_label) * 
-    z, data = dataSet)
+glm(formula = fut_ret_measure_25 ~ factor(title_label) + ret_measure_70 + 
+    factor(title_label) * ret_measure_70, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--14.9873  -0.0559   0.0128   0.0727   4.9110 
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-14.9822   -0.0576    0.0134    0.0755    7.2993  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -0.0156486  0.0002931 -53.389  < 2e-16 ***
-factor(title_label)Mrs   -0.0056715  0.0008625  -6.576 4.83e-11 ***
-z                         0.0026194  0.0004059   6.454 1.09e-10 ***
-factor(title_label)Mrs:z  0.0094932  0.0011791   8.051 8.22e-16 ***
+                                        Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                           -0.0157611  0.0001936 -81.409   <2e-16 ***
+factor(title_label)Mrs                 0.0006400  0.0005622   1.138    0.255    
+ret_measure_70                        -0.0102061  0.0004904 -20.810   <2e-16 ***
+factor(title_label)Mrs:ret_measure_70  0.0210657  0.0015391  13.687   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.1913 on 1010246 degrees of freedom
-  (71697 observations deleted due to missingness)
-Multiple R-squared:  0.0001605,	Adjusted R-squared:  0.0001576 
-F-statistic: 54.06 on 3 and 1010246 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.03986019)
+
+    Null deviance: 48417  on 1214176  degrees of freedom
+Residual deviance: 48397  on 1214173  degrees of freedom
+  (112375 observations deleted due to missingness)
+AIC: -466845
+
+Number of Fisher Scoring iterations: 2
 
 > 
 > #regression on future retunrs over a 70 day period
 > 
 > 
-> model12<- lm(fut_ret_measure_70 ~ factor(title_label) + x+ factor(title_label)* x,data = dataSet)
+> model12<- glm(fut_ret_measure_70 ~ factor(title_label) + ret_measure_250+ factor(title_label)* ret_measure_250,data = total_data4)
 > summary(model12)
 
 Call:
-lm(formula = fut_ret_measure_70 ~ factor(title_label) + x + factor(title_label) * 
-    x, data = dataSet)
+glm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--15.2959  -0.0926   0.0243   0.1244   7.1530 
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-15.2956   -0.0948    0.0249    0.1270    7.3091  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -0.0303627  0.0004582 -66.269  < 2e-16 ***
-factor(title_label)Mrs   -0.0054684  0.0013573  -4.029 5.60e-05 ***
-x                         0.0199879  0.0006490  30.797  < 2e-16 ***
-factor(title_label)Mrs:x  0.0081423  0.0018785   4.334 1.46e-05 ***
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0190565  0.0003131 -60.868   <2e-16 ***
+factor(title_label)Mrs                 -0.0022016  0.0009047  -2.434    0.015 *  
+ret_measure_250                         0.0217476  0.0004594  47.339   <2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0009847  0.0014048   0.701    0.483    
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.2853 on 877853 degrees of freedom
-  (204090 observations deleted due to missingness)
-Multiple R-squared:  0.001369,	Adjusted R-squared:  0.001366 
-F-statistic: 401.2 on 3 and 877853 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.08831806)
 
-> model12<- lm(fut_ret_measure_70 ~ factor(title_label) + z+ factor(title_label)* z,data = dataSet)
+    Null deviance: 91588  on 1034489  degrees of freedom
+Residual deviance: 91364  on 1034486  degrees of freedom
+  (292062 observations deleted due to missingness)
+AIC: 425250
+
+Number of Fisher Scoring iterations: 2
+
+> model12<- glm(fut_ret_measure_70 ~ factor(title_label) + ret_measure_70+ factor(title_label)* ret_measure_70,data = total_data4)
 > summary(model12)
 
 Call:
-lm(formula = fut_ret_measure_70 ~ factor(title_label) + z + factor(title_label) * 
-    z, data = dataSet)
+glm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_70 + 
+    factor(title_label) * ret_measure_70, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--15.3336  -0.0918   0.0281   0.1290   7.1881 
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-15.5816   -0.0925    0.0313    0.1342    7.3250  
 
 Coefficients:
-                           Estimate Std. Error t value Pr(>|t|)    
-(Intercept)              -0.0379271  0.0004577 -82.866  < 2e-16 ***
-factor(title_label)Mrs   -0.0049155  0.0013467  -3.650 0.000262 ***
-z                         0.0131036  0.0006337  20.677  < 2e-16 ***
-factor(title_label)Mrs:z  0.0114458  0.0018412   6.216 5.09e-10 ***
+                                        Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                           -0.0335451  0.0003075 -109.087  < 2e-16 ***
+factor(title_label)Mrs                 0.0018054  0.0008930    2.022   0.0432 *  
+ret_measure_70                         0.0064676  0.0007790    8.303  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70  0.0191958  0.0024446    7.852 4.09e-15 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.2987 on 1010222 degrees of freedom
-  (71721 observations deleted due to missingness)
-Multiple R-squared:  0.0006248,	Adjusted R-squared:  0.0006219 
-F-statistic: 210.5 on 3 and 1010222 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.1005605)
+
+    Null deviance: 122116  on 1214164  degrees of freedom
+Residual deviance: 122097  on 1214161  degrees of freedom
+  (112387 observations deleted due to missingness)
+AIC: 656725
+
+Number of Fisher Scoring iterations: 2
 
 > 
 > #regression on future returns over a 250 day period
 > 
 > 
-> model15<- lm(fut_ret_measure_250~factor(title_label) + x+ factor(title_label)* x,data = dataSet)
+> model15<- glm(fut_ret_measure_250~factor(title_label) + ret_measure_250+ factor(title_label)* ret_measure_250,data = total_data4)
 > summary(model15)
 
 Call:
-lm(formula = fut_ret_measure_250 ~ factor(title_label) + x + 
-    factor(title_label) * x, data = dataSet)
+glm(formula = fut_ret_measure_250 ~ factor(title_label) + ret_measure_250 + 
+    factor(title_label) * ret_measure_250, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--15.2338  -0.1940   0.0675   0.2667  13.8458 
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-14.8930   -0.1979    0.0808    0.2737   13.8589  
 
 Coefficients:
-                           Estimate Std. Error  t value Pr(>|t|)    
-(Intercept)              -0.0924623  0.0008727 -105.947  < 2e-16 ***
-factor(title_label)Mrs   -0.0093918  0.0025853   -3.633  0.00028 ***
-x                         0.0480189  0.0012362   38.844  < 2e-16 ***
-factor(title_label)Mrs:x  0.0172232  0.0035781    4.813 1.48e-06 ***
+                                         Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                            -0.0653921  0.0005934 -110.198  < 2e-16 ***
+factor(title_label)Mrs                 -0.0053201  0.0017147   -3.103  0.00192 ** 
+ret_measure_250                         0.0265764  0.0008710   30.514  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_250  0.0081387  0.0026634    3.056  0.00224 ** 
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.5434 on 877824 degrees of freedom
-  (204119 observations deleted due to missingness)
-Multiple R-squared:  0.002145,	Adjusted R-squared:  0.002141 
-F-statistic: 628.9 on 3 and 877824 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.3172676)
 
-> model15<- lm(fut_ret_measure_250~factor(title_label) + z+ factor(title_label)* z,data = dataSet)
+    Null deviance: 328554  on 1034448  degrees of freedom
+Residual deviance: 328196  on 1034445  degrees of freedom
+  (292103 observations deleted due to missingness)
+AIC: 1748088
+
+Number of Fisher Scoring iterations: 2
+
+> model15<- glm(fut_ret_measure_250~factor(title_label) + ret_measure_70+ factor(title_label)* ret_measure_70,data = total_data4)
 > summary(model15)
 
 Call:
-lm(formula = fut_ret_measure_250 ~ factor(title_label) + z + 
-    factor(title_label) * z, data = dataSet)
+glm(formula = fut_ret_measure_250 ~ factor(title_label) + ret_measure_70 + 
+    factor(title_label) * ret_measure_70, data = total_data4)
 
-Residuals:
-     Min       1Q   Median       3Q      Max 
--15.2778  -0.1952   0.0783   0.2747  13.8951 
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-15.5237   -0.1964    0.0886    0.2863   13.8841  
 
 Coefficients:
-                           Estimate Std. Error  t value Pr(>|t|)    
-(Intercept)              -0.0937153  0.0008702 -107.697  < 2e-16 ***
-factor(title_label)Mrs   -0.0082283  0.0025604   -3.214  0.00131 ** 
-z                         0.0060364  0.0012049    5.010 5.44e-07 ***
-factor(title_label)Mrs:z  0.0247921  0.0035006    7.082 1.42e-12 ***
+                                       Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                           -0.094827   0.000577 -164.345  < 2e-16 ***
+factor(title_label)Mrs                 0.001022   0.001675    0.610    0.542    
+ret_measure_70                        -0.048795   0.001462  -33.373  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70  0.022024   0.004587    4.801 1.58e-06 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.5679 on 1010178 degrees of freedom
-  (71765 observations deleted due to missingness)
-Multiple R-squared:  0.0001206,	Adjusted R-squared:  0.0001176 
-F-statistic: 40.62 on 3 and 1010178 DF,  p-value: < 2.2e-16
+(Dispersion parameter for gaussian family taken to be 0.354038)
+
+    Null deviance: 430243  on 1214096  degrees of freedom
+Residual deviance: 429835  on 1214093  degrees of freedom
+  (112455 observations deleted due to missingness)
+AIC: 2184805
+
+Number of Fisher Scoring iterations: 2
