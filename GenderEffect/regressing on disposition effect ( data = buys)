@@ -1,3 +1,8 @@
+tmp2.no.na = data from 2015-2018
+tmp3.no.na = data from 2018-2019
+total_data = all the data combined
+
+
 ### testing regressions on disposition effect
 >
 > # regression on past returns over a day
