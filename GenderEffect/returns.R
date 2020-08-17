@@ -420,33 +420,70 @@ model15<- lm(fut_ret_measure_250~factor(title_label) + z+ factor(title_label)* z
 summary(model15)
 
 
-### Creating a dollar neutral portfolio 
-
+### Creating a dollar neutral portfolio
+ 
 #grouping data by months
-
+ 
 D<-data.table(total_data)
-
+ 
 months<-setDT(D)[, months_years := format(as.Date(c(D$close_date)), "%Y-%m") ]
-
+ 
 totalData <- (cbind(D, months))
 as.data.table(totalData)
-table1<- unique(totalData[,. (client,title_label, months_years, isin)])
-
+table1<- unique(totalData[,. (client,title_label, months_years, isin, ret_measure_1, ret_measure_5, fut_ret_measure_5, ret_measure_25, fut_ret_measure_25, ret_measure_70, ret_measure_250, fut_ret_measure_250,fut_ret_measure_1,fut_ret_measure_70)])
+ 
 table1[,sumWomen:= .N , by = .(months_years,title_label)][title_label == "Mrs"]
 table1[,sumMen:= .N , by = .(months_years,title_label)][title_label == "Mr"]
-
-tmp = table1[,.(client, title_label, months_years, isin )]
+ 
+tmp = unique(table1[,.(client, title_label, months_years, isin)])
 tmp[, cnt:= .N , by = .(months_years,title_label, isin)]
+ 
+ 
 tmp = tmp[,.(months_years, isin, title_label, cnt)]%>%unique()
-tmp2 = dcast(tmp, months_years  + isin ~ title_label, value.var = 'cnt')
-tmp2[is.na(tmp2)] <- 0
-
-table2<- table1[,.(client, title_label, months_years, isin )]
+tmp2 = dcast(tmp, months_years  + isin ~ title_label, value.var = c('cnt'))
+setnames(tmp2, "Mr", "count_Mr")
+setnames(tmp2, "Mrs", "count_Mrs")
+ 
+ 
+table2<- unique(table1[,.(client, title_label, months_years, ret_measure_1, ret_measure_5, fut_ret_measure_5, ret_measure_25, fut_ret_measure_25, ret_measure_70, ret_measure_250, fut_ret_measure_250,fut_ret_measure_1,fut_ret_measure_70)])
 table2[, count:= .N , by = .(months_years,title_label)]
-table2 = table2[,.(months_years,title_label, count)]%>%unique()
-newTable2 = dcast(table2, months_years   ~ title_label, value.var = 'count')
-newTable2[is.na(newTable2)] <- 0
-
+table2 = table2[,.(months_years,title_label, count, return_1, return_5, return_25, return_70, return_250, fut_return_1, fut_return_5, fut_return_25, fut_return_70, fut_return_250)]%>%unique()
+newTable2 = dcast(table2, months_years   ~ title_label, value.var = ('count'))
+ 
+ 
 as.data.table(newTable2)
+ 
+#data table with future and past returns
+totalTable<- merge(tmp2, newTable2, by= ("months_years"), all.x = T)
+datTotalData<- data.table(totalData)
+#au lieu d'unique conditionner sur la date sur laquelle on prend le retour
+#max date by years_months ans close date = max date
+returns_fut_past<- datTotalData[,. (fut_ret_measure_25, ret_measure_25,months_years, isin_code)]
+setnames(returns_fut_past, "isin_code", "isin")
+totalTable2 <-merge(totalTable, returns_fut_past, by = c("isin", "months_years"), all.x = T)
+ 
+totalTable2[, division_fem := (count_Mrs/Mrs), by=. (months_years)]
+totalTable2[, division_hom := (count_Mr/Mr), by = .(months_years)]
+ 
+totalTable2[, demeaned_fraction_Mr := division_hom - mean(division_hom, na.rm=TRUE)]
+totalTable2[, demeaned_fraction_Mrs := division_fem - mean (division_fem, na.rm = TRUE)]
+ 
+#calculate quantiles by months
+totalTable2[, q1_Mr := quantile(division_hom,0.2, na.rm =TRUE), by=.(months_years) ]
+totalTable2[, q2_Mr := quantile(division_hom,0.8, na.rm =TRUE), by=.(months_years) ]
+totalTable2[, q1_Mrs := quantile(division_fem,0.2, na.rm =TRUE), by=.(months_years) ]
+totalTable2[, q2_Mrs := quantile(division_fem,0.8, na.rm =TRUE), by=.(months_years) ]
+ 
+totalTable2[, indicator1_hom:= ifelse(division_hom>q1_Mr& division_hom<q2_Mr,1,0)]
+totalTable2[, indicator1_fem:= ifelse(division_fem>q1_Mrs& division_fem<q2_Mrs,1,0)]
+totalTable3.na <- drop_na(totalTable2.na, c(indicator1_hom, indicator1_fem, fut_ret_measure_25,ret_measure_25))
+ 
+totalTable3.na[, portf_simple_1_hom:= sum(fut_ret_measure_25*demeaned_fraction_Mr), by =.(months_years)]
+totalTable3.na[, portf_simple_1_fem:= sum(demeaned_fraction_Mrs*fut_ret_measure_25), by =.(months_years)]
+totalTable3.na[, portf_ret_1_hom:= sum(division_hom*indicator1_hom*fut_ret_measure_25), by =.(months_years)]
+totalTable3.na[, portf_ret_1_fem:= sum(division_fem*indicator1_fem*fut_ret_measure_25), by =.(months_years)]
+totalTable3.na[, portf_ret_2_hom:= sum((indicator1_hom*division_hom *(ret_measure_25 >0)-(division_hom*indicator1_hom *(ret_measure_25<0))*fut_ret_measure_25))]
+totalTable3.na[, portf_ret_2_fem:= sum((indicator1_fem*division_fem *(ret_measure_25 >0)-(division_fem*indicator1_fem *(ret_measure_25<0))*fut_ret_measure_25))]
+ 
 
 
