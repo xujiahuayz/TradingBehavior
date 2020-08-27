@@ -11,7 +11,7 @@ library(dplyr)
 library(hrbrthemes)
 library(ggpubr)
 
-
+# import data
 rm(list=ls())
 load("/home/qam/Sofiya/Data/computed_returns_2010_2020.rda")
 load("/home/qam/utrans2_2001_2019_reduced.rda")
