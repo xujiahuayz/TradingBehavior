@@ -1,0 +1,135 @@
+
+Call:
+glm(formula = fut_ret_measure_1 ~ factor(title_label) + ret_250 + 
+    factor(title_label) * ret_250, data = dataSet)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-6.1873  -0.0111   0.0012   0.0127   3.9472  
+
+Coefficients:
+                                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                    -1.434e-03  4.971e-05 -28.847  < 2e-16 ***
+factor(title_label)Mrs          2.470e-04  1.425e-04   1.734   0.0829 .  
+ret_250                        -2.771e-04  4.971e-05  -5.574 2.49e-08 ***
+factor(title_label)Mrs:ret_250  1.040e-04  1.425e-04   0.730   0.4655    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.005016819)
+
+    Null deviance: 11610  on 2314256  degrees of freedom
+Residual deviance: 11610  on 2314253  degrees of freedom
+AIC: -5686314
+
+Number of Fisher Scoring iterations: 2
+
+> summary(model2)
+
+Call:
+glm(formula = fut_ret_measure_5 ~ factor(title_label) + ret_250 + 
+    factor(title_label) * ret_250, data = dataSet)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-4.5309  -0.0265   0.0035   0.0307   4.0843  
+
+Coefficients:
+                                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                    -3.170e-03  7.207e-05 -43.985  < 2e-16 ***
+factor(title_label)Mrs          3.112e-04  2.066e-04   1.506    0.132    
+ret_250                         2.815e-04  7.207e-05   3.906  9.4e-05 ***
+factor(title_label)Mrs:ret_250  2.215e-04  2.066e-04   1.072    0.283    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.01054766)
+
+    Null deviance: 24410  on 2314256  degrees of freedom
+Residual deviance: 24410  on 2314253  degrees of freedom
+AIC: -3966571
+
+Number of Fisher Scoring iterations: 2
+
+> summary(model3)
+
+Call:
+glm(formula = fut_ret_measure_25 ~ factor(title_label) + ret_250 + 
+    factor(title_label) * ret_250, data = dataSet)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-6.3347  -0.0584   0.0094   0.0707   4.7327  
+
+Coefficients:
+                                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                    -0.0087831  0.0001229 -71.445  < 2e-16 ***
+factor(title_label)Mrs         -0.0003137  0.0003523  -0.890    0.373    
+ret_250                         0.0042788  0.0001229  34.806  < 2e-16 ***
+factor(title_label)Mrs:ret_250  0.0015728  0.0003523   4.464 8.05e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.03068573)
+
+    Null deviance: 71061  on 2314256  degrees of freedom
+Residual deviance: 71015  on 2314253  degrees of freedom
+AIC: -1495190
+
+Number of Fisher Scoring iterations: 2
+
+> summary(model4)
+
+Call:
+glm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_250 + 
+    factor(title_label) * ret_250, data = dataSet)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-6.2503  -0.0943   0.0247   0.1242   4.8339  
+
+Coefficients:
+                                 Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                    -0.0207069  0.0001932 -107.200   <2e-16 ***
+factor(title_label)Mrs         -0.0010715  0.0005536   -1.935   0.0529 .  
+ret_250                         0.0121731  0.0001932   63.020   <2e-16 ***
+factor(title_label)Mrs:ret_250  0.0004409  0.0005536    0.796   0.4258    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.0757579)
+
+    Null deviance: 175669  on 2314256  degrees of freedom
+Residual deviance: 175323  on 2314253  degrees of freedom
+AIC: 596308
+
+Number of Fisher Scoring iterations: 2
+
+> summary(model5)
+
+Call:
+glm(formula = fut_ret_measure_250 ~ factor(title_label) + ret_250 + 
+    factor(title_label) * ret_250, data = dataSet)
+
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-14.5578   -0.1860    0.0874    0.2838    6.4585  
+
+Coefficients:
+                                 Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                    -0.0955157  0.0004216 -226.538  < 2e-16 ***
+factor(title_label)Mrs          0.0081593  0.0012084    6.752 1.46e-11 ***
+ret_250                         0.0389160  0.0004216   92.298  < 2e-16 ***
+factor(title_label)Mrs:ret_250 -0.0070597  0.0012084   -5.842 5.16e-09 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.3609581)
+
+    Null deviance: 838734  on 2314256  degrees of freedom
+Residual deviance: 835348  on 2314253  degrees of freedom
+AIC: 4209370
+
+Number of Fisher Scoring iterations: 2
+
+
