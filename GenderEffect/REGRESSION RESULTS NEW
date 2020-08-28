@@ -1,0 +1,59 @@
+## do women like momentum
+
+Call:
+lm(formula = ret_measure_25 ~ factor(title_label), data = dataTot)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.7311 -0.0839  0.0002  0.0795  6.1421 
+
+Coefficients:
+                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)            -0.0121180  0.0001699 -71.340  < 2e-16 ***
+factor(title_label)Mrs  0.0038926  0.0004855   8.017 1.08e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.2421 on 2314255 degrees of freedom
+Multiple R-squared:  2.777e-05,	Adjusted R-squared:  2.734e-05 
+F-statistic: 64.28 on 1 and 2314255 DF,  p-value: 1.08e-15
+
+> summary(model4)
+
+Call:
+lm(formula = ret_measure_70 ~ factor(title_label), data = dataTot)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-7.9295 -0.1343  0.0085  0.1358  4.7621 
+
+Coefficients:
+                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)            -0.0171452  0.0002469  -69.44   <2e-16 ***
+factor(title_label)Mrs  0.0134510  0.0007058   19.06   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3519 on 2314255 degrees of freedom
+Multiple R-squared:  0.0001569,	Adjusted R-squared:  0.0001565 
+F-statistic: 363.2 on 1 and 2314255 DF,  p-value: < 2.2e-16
+
+> summary(model6)
+
+Call:
+lm(formula = ret_measure_250 ~ factor(title_label), data = dataTot)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-11.6314  -0.2674   0.0264   0.2669   6.8079 
+
+Coefficients:
+                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)            -0.0212655  0.0004189  -50.77   <2e-16 ***
+factor(title_label)Mrs  0.0416742  0.0011972   34.81   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.5969 on 2314255 degrees of freedom
+Multiple R-squared:  0.0005233,	Adjusted R-squared:  0.0005229 
+F-statistic:  1212 on 1 and 2314255 DF,  p-value: < 2.2e-16
