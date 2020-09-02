@@ -1,0 +1,137 @@
+Call:
+lm(formula = fut_ret_measure_1 ~ factor(title_label) + ret_measure_70 + 
+    ret_measure_250 + ret_measure_25 + factor(title_label) * 
+    (ret_measure_70 + ret_measure_250 + ret_measure_25), data = dataTot)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.1908 -0.0115  0.0014  0.0130  3.9340 
+
+Coefficients:
+                                         Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                            -1.750e-03  4.952e-05  -35.336   <2e-16 ***
+factor(title_label)Mrs                  2.511e-04  1.417e-04    1.772   0.0764 .  
+ret_measure_70                          5.265e-03  2.392e-04   22.010   <2e-16 ***
+ret_measure_250                         1.091e-03  1.087e-04   10.037   <2e-16 ***
+ret_measure_25                         -3.507e-02  2.939e-04 -119.313   <2e-16 ***
+factor(title_label)Mrs:ret_measure_70  -9.224e-04  7.369e-04   -1.252   0.2107    
+factor(title_label)Mrs:ret_measure_250  4.397e-04  3.323e-04    1.323   0.1857    
+factor(title_label)Mrs:ret_measure_25   6.678e-04  9.178e-04    0.728   0.4668    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.07048 on 2314249 degrees of freedom
+Multiple R-squared:  0.009895,	Adjusted R-squared:  0.009892 
+F-statistic:  3304 on 7 and 2314249 DF,  p-value: < 2.2e-16
+
+> summary(pred_future_ret_5)
+
+Call:
+lm(formula = fut_ret_measure_5 ~ factor(title_label) + ret_measure_70 + 
+    ret_measure_250 + ret_measure_25 + factor(title_label) * 
+    (ret_measure_70 + ret_measure_250 + ret_measure_25), data = dataTot)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-4.5311 -0.0268  0.0037  0.0310  4.0974 
+
+Coefficients:
+                                         Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                            -3.653e-03  7.172e-05  -50.934  < 2e-16 ***
+factor(title_label)Mrs                  3.622e-04  2.052e-04    1.765 0.077545 .  
+ret_measure_70                          8.656e-03  3.464e-04   24.987  < 2e-16 ***
+ret_measure_250                         3.337e-03  1.575e-04   21.187  < 2e-16 ***
+ret_measure_25                         -5.833e-02  4.256e-04 -137.039  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70  -2.379e-04  1.067e-03   -0.223 0.823564    
+factor(title_label)Mrs:ret_measure_250 -2.369e-04  4.812e-04   -0.492 0.622539    
+factor(title_label)Mrs:ret_measure_25   4.848e-03  1.329e-03    3.648 0.000264 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1021 on 2314249 degrees of freedom
+Multiple R-squared:  0.01238,	Adjusted R-squared:  0.01237 
+F-statistic:  4143 on 7 and 2314249 DF,  p-value: < 2.2e-16
+
+> summary(pred_future_ret_25)
+
+Call:
+lm(formula = fut_ret_measure_25 ~ factor(title_label) + ret_measure_70 + 
+    ret_measure_250 + ret_measure_25 + factor(title_label) * 
+    (ret_measure_70 + ret_measure_250 + ret_measure_25), data = dataTot)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.3335 -0.0583  0.0093  0.0706  4.7562 
+
+Coefficients:
+                                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                            -0.0090535  0.0001228 -73.734  < 2e-16 ***
+factor(title_label)Mrs                 -0.0003231  0.0003513  -0.920 0.357743    
+ret_measure_70                          0.0135142  0.0005931  22.785  < 2e-16 ***
+ret_measure_250                         0.0119991  0.0002696  44.504  < 2e-16 ***
+ret_measure_25                         -0.0683856  0.0007287 -93.846  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70   0.0066141  0.0018270   3.620 0.000294 ***
+factor(title_label)Mrs:ret_measure_250  0.0023875  0.0008238   2.898 0.003752 ** 
+factor(title_label)Mrs:ret_measure_25   0.0039636  0.0022755   1.742 0.081531 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1747 on 2314249 degrees of freedom
+Multiple R-squared:  0.005583,	Adjusted R-squared:  0.00558 
+F-statistic:  1856 on 7 and 2314249 DF,  p-value: < 2.2e-16
+
+> summary(pred_future_ret_70)
+
+Call:
+lm(formula = fut_ret_measure_70 ~ factor(title_label) + ret_measure_70 + 
+    ret_measure_250 + ret_measure_25 + factor(title_label) * 
+    (ret_measure_70 + ret_measure_250 + ret_measure_25), data = dataTot)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.2588 -0.0949  0.0246  0.1237  4.9306 
+
+Coefficients:
+                                         Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                            -0.0202143  0.0001932 -104.618  < 2e-16 ***
+factor(title_label)Mrs                 -0.0011982  0.0005528   -2.167   0.0302 *  
+ret_measure_70                          0.0199982  0.0009333   21.427  < 2e-16 ***
+ret_measure_250                         0.0264660  0.0004243   62.380  < 2e-16 ***
+ret_measure_25                         -0.0508463  0.0011467  -44.341  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70   0.0161924  0.0028750    5.632 1.78e-08 ***
+factor(title_label)Mrs:ret_measure_250 -0.0070931  0.0012963   -5.472 4.46e-08 ***
+factor(title_label)Mrs:ret_measure_25   0.0041519  0.0035807    1.160   0.2462    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.275 on 2314249 degrees of freedom
+Multiple R-squared:  0.003888,	Adjusted R-squared:  0.003885 
+F-statistic:  1290 on 7 and 2314249 DF,  p-value: < 2.2e-16
+
+> summary(pred_future_ret_250)
+
+Call:
+lm(formula = fut_ret_measure_250 ~ factor(title_label) + ret_measure_70 + 
+    ret_measure_250 + ret_measure_25 + factor(title_label) * 
+    (ret_measure_70 + ret_measure_250 + ret_measure_25), data = dataTot)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-14.5628  -0.1870   0.0906   0.2815   6.5071 
+
+Coefficients:
+                                         Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)                            -0.0933578  0.0004214 -221.521  < 2e-16 ***
+factor(title_label)Mrs                  0.0067790  0.0012058    5.622 1.89e-08 ***
+ret_measure_70                         -0.0064715  0.0020357   -3.179  0.00148 ** 
+ret_measure_250                         0.0967434  0.0009254  104.542  < 2e-16 ***
+ret_measure_25                         -0.0360975  0.0025011  -14.433  < 2e-16 ***
+factor(title_label)Mrs:ret_measure_70  -0.0071041  0.0062709   -1.133  0.25727    
+factor(title_label)Mrs:ret_measure_250 -0.0207466  0.0028274   -7.338 2.17e-13 ***
+factor(title_label)Mrs:ret_measure_25   0.0147196  0.0078101    1.885  0.05947 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.5998 on 2314249 degrees of freedom
+Multiple R-squared:  0.007462,	Adjusted R-squared:  0.007459 
+F-statistic:  2485 on 7 and 2314249 DF,  p-value: < 2.2e-16
