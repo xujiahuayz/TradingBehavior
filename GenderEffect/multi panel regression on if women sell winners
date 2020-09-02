@@ -1,0 +1,57 @@
+ ### multi panel regression on whether women sell winners
+> 
+> model_do_women_sell_winners <- glm(formula = I(title_label == "Mrs")~ ret_measure_250 + ret_measure_70 + ret_measure_25,family = "binomial", data = dataTot2)
+> 
+> model_do_women_sell_winners_2 <- glm(formula = I(title_label == "Mrs")~ ret_measure_250 + ret_measure_70 ,family = "binomial", data = dataTot2)
+> summary(model_do_women_sell_winners)
+
+Call:
+glm(formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + 
+    ret_measure_25, family = "binomial", data = dataTot2)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-0.7618  -0.5172  -0.5095  -0.4963   2.6049  
+
+Coefficients:
+                 Estimate Std. Error  z value Pr(>|z|)    
+(Intercept)     -1.970680   0.002010 -980.479  < 2e-16 ***
+ret_measure_250  0.131669   0.004504   29.233  < 2e-16 ***
+ret_measure_70   0.005202   0.009816    0.530    0.596    
+ret_measure_25  -0.085956   0.012143   -7.079 1.45e-12 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1720313  on 2314256  degrees of freedom
+Residual deviance: 1719018  on 2314253  degrees of freedom
+AIC: 1719026
+
+Number of Fisher Scoring iterations: 4
+
+> summary(model_do_women_sell_winners_2)
+
+Call:
+glm(formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70, 
+    family = "binomial", data = dataTot2)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-0.7576  -0.5170  -0.5094  -0.4968   2.6016  
+
+Coefficients:
+                 Estimate Std. Error  z value Pr(>|z|)    
+(Intercept)     -1.970265   0.002009 -980.873  < 2e-16 ***
+ret_measure_250  0.133031   0.004496   29.587  < 2e-16 ***
+ret_measure_70  -0.039070   0.007566   -5.164 2.42e-07 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1720313  on 2314256  degrees of freedom
+Residual deviance: 1719069  on 2314254  degrees of freedom
+AIC: 1719075
+
+Number of Fisher Scoring iterations: 4
