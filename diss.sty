@@ -1,0 +1,65 @@
+% \usepackage[T1]{fontenc}
+% \usepackage{mathptmx}
+% \usepackage[hyphens]{url}
+% \usepackage[pdfa]{hyperref}
+
+\usepackage{amsthm,bbm}
+\usepackage{amsmath,bm}
+\usepackage{mathtools}
+\usepackage{fancyhdr}
+\fancyhf{}
+\usepackage[capposition=top]{floatrow}
+\usepackage{float}
+\floatplacement{figure}{H}
+\floatplacement{table}{H}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+% \newtheorem{slemm}{Lemma}[lemma]
+\usepackage[round]{natbib}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usetikzlibrary{trees}
+\usepackage{verbatim}
+
+\usepackage{array}
+\usepackage{slashbox}
+\usepackage{tabularx,ragged2e,booktabs,multirow,rotating,makecell,pdflscape,xcolor,colortbl,longtable}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% \usepackage{hyperref}
+\renewcommand*{\theHsection}{\thepart.\arabic{section}.\thepage}  %make sure hyperlinks are good in toc
+
+\hypersetup{colorlinks,linkcolor={blue},citecolor={black},urlcolor={blue}}
+
+
+\let\orilongtable\longtable 
+\renewcommand\longtable[1][]{\orilongtable[c]} %make sure tables centered in pdf
+
+\usepackage[hang,flushmargin,bottom]{footmisc}
+
+\makeatletter
+\def\blfootnote{\xdef\@thefnmark{}\@footnotetext}
+\makeatother
+
+\newcommand{\blandscape}{\begin{landscape}}
+\newcommand{\elandscape}{\end{landscape}}
+
+\newcommand{\bfigure}{\begin{figure}}
+\newcommand{\efigure}{\end{figure}}
+
+\newcommand{\btable}{\begin{table}}
+\newcommand{\etable}{\end{table}}
+
+% \usepackage{chngcntr}
+% \counterwithin{figure}{part}
+% 
+% \renewcommand{\thefigure}{\thepart.\arabic{figure}}
+% 
+% \tikzstyle{level 1}=[level distance=3.5cm, sibling distance=3.5cm]
+% \tikzstyle{level 2}=[level distance=3.5cm, sibling distance=2cm]
+% 
+% \tikzstyle{ev} = [text width=4em, text centered]
+% \tikzstyle{end} = [minimum width=3pt,inner sep=0pt]
+

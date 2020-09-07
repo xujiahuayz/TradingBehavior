@@ -27,7 +27,6 @@ library(ggplot2)
 library(gridExtra)
 library(dplyr)
 library(magrittr)
-# library(doMC)
 library(survival)
 library(plm)
 library(pglm)
@@ -754,7 +753,7 @@ tbl[, plot(time,  mort, type = 'l')]
 ```
 
 ```{r coxre, eval=T}
-load('tsregressreg.rda')
+load('data/tsregressreg.rda')
 
 # xx = merge(regtable, xx)
 # # save(xx, file = 'tsregressreg.rda')

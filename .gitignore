@@ -1,6 +1,13 @@
 .Rhistory
 .Proj.user
-.rda
+*.rda
+*.rds
 .RDataTmp
 .DS_Store
-
+.Rproj.user
+/data/*
+*/venv/*
+*/.idea/*
+*/.vscode/*
+*/__pycache__/*
+*/build/*

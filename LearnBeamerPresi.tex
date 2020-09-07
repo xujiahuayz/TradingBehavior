@@ -1,0 +1,1031 @@
+% !TeX spellcheck = en_US
+
+\documentclass{beamer}
+
+\usepackage{authblk,fullpage,amsfonts,amssymb,theorem}
+\usepackage{graphicx,hyperref}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{bm}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows, positioning}
+
+\tikzset{
+	treenode/.style = {shape=rectangle, rounded corners,
+		draw, align=center, text width=10em,
+		fill=red!15},
+	root/.style     = {diamond, draw, fill=blue!20,
+		text width=6em, text badly centered, node distance=3cm, inner sep=0pt},
+	env/.style      = {treenode, font=\ttfamily\normalsize},
+	dummy/.style    = {circle,draw},
+	curve/.style={->, thick, >=stealth'},
+}
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{bag} = [text width=3em, text centered]
+\tikzstyle{end} = [rectangle, draw=none, minimum width=2pt, inner sep=0pt]
+
+
+\mode<presentation> {
+
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+%\usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+%\usetheme{Boadilla}
+%\usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+%\usetheme{Dresden}
+%\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+%\usetheme{Hannover}
+%\usetheme{Ilmenau}
+%\usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+%\usetheme{Montpellier}
+%\usetheme{PaloAlto}
+%\usetheme{Pittsburgh}
+%\usetheme{Rochester}
+%\usetheme{Singapore}
+%\usetheme{Szeged}
+%\usetheme{Warsaw}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+
+%\usecolortheme{albatross}
+\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+%\usecolortheme{rose}
+%\usecolortheme{seagull}
+%\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+}
+
+\usepackage{graphicx} % Allows including images
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+%\usepackage {tikz}
+
+\setbeamertemplate{caption}[numbered]
+
+\AtBeginSection[]{
+	\begin{frame}
+		\vfill
+		\centering
+		\begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+			\usebeamerfont{title}\insertsectionhead\par%
+		\end{beamercolorbox}
+		\vfill
+	\end{frame}
+}
+
+%\usepackage {xcolor}
+\definecolor {processblue}{cmyk}{0.96,0,0,0}
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Short title]{Learning (not) to trade} % The short title appears at the bottom of every slide, the full title is only on the title page
+
+\author{Teodor Godina \and Serge Kassibrakis \and Semyon Malamud
+	\\
+	Alberto Teguia \and Jiahua (Java) Xu} % Your name
+\institute[EPFL]
+{
+Swissquote, EPFL, SFI, UBC \\ % Your institution for the title page
+\medskip
+}
+\date{\today} % Date, can be changed to a custom date
+
+\begin{document}
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+
+%\begin{frame}
+%\frametitle{Overview} % Table of contents slide, comment this block out to remove it
+%\tableofcontents % Throughout your presentation, if you choose to use \section{} and \subsection{} commands, these will automatically be printed on this slide as an overview of your presentation
+%\end{frame}
+
+%----------------------------------------------
+%	PRESENTATION SLIDES
+%----------------------------------------------
+
+\section{Two quick surveys}
+
+\begin{frame}[allowframebreaks]{Survey}
+	\begin{block}{}
+		Imagine you are a stock trader. You have performed very \textcolor{blue}{well} during the last year:
+		\textcolor{blue}{$10\%$} of return. Now you wonder whether to keep trading or exit.
+	\end{block}
+
+Other things equal, you'd be more likely to exit, if you:
+
+\begin{enumerate}[A]
+	\item have been trading for 10 years
+	\item have been trading for 2 years
+\end{enumerate}
+
+\includegraphics[scale=0.1]{figures/happymoney}
+
+\framebreak
+
+	\begin{block}{}
+		Imagine you are a stock trader. You have performed very \textcolor{red}{poorly} during the last year:
+		\textcolor{red}{$-10\%$} of return. Now you wonder whether to keep trading or exit.
+	\end{block}
+
+	Other things equal, you'd be more likely to exit, if you:
+
+	\begin{enumerate}[A]
+		\item have been trading for 10 years
+		\item have been trading for 2 years
+	\end{enumerate}
+
+	\includegraphics[scale=0.2]{figures/sadmoney}
+
+\end{frame}
+
+
+\section{Research motivation and background}
+
+\begin{frame}{Exit procrastination---Lindy's law?}
+
+	\begin{figure}
+	\includegraphics[width=0.85\linewidth,trim={10 30 0 0},clip]{figures/exitTS-3}
+	\caption{At a given return level (highest tertile), higher trading age is associated with lower exit rate}
+	\end{figure}
+
+\end{frame}
+
+
+\begin{frame}{Why is it relevant?}
+
+	\begin{enumerate}
+		\item{Trading platforms}
+		\begin{itemize}
+			\item should focus on retaining inexperienced traders
+		\end{itemize}
+
+		\item{Investors}
+		\begin{itemize}
+			\item should understand their trading inertia might not be economically rational
+		\end{itemize}
+	\end{enumerate}
+
+
+\end{frame}
+
+
+\begin{frame}{Literature review}
+
+	\begin{itemize}
+		\item \cite{Seru2010}: two learning routes of investors---the first type improves over time by learning from their trading experience, while the second type realizes their ability is insufficient and ceases to trade.
+		\item \cite{Nicolosi2009}: investors benefit from trading experience and can learn to place more profitable trades.
+		\item \cite{Gervais2001}: traders develop assessments of their own trading ability through experience.
+		\item \cite{Schraeder2015}: young investors trade frequently but obtain lower returns.
+
+		%		Also relevant for our study is the literature on the trading behavior of different investor cohorts.  \cite{Grinblatt2001} show that domestic and less sophisticated investors tend to be reversal traders, whereas foreign and more sophisticated investors tend to be trend followers. \cite{Dorn2005} investigate the relationship between investor behaviors and objective attributes such age, gender and income, as well as subjective attributes such as self-reported risk attitude. They find that investors with high risk tolerance and who believe themselves to be more knowledgeable than the average trade more aggressively. \cite{Kourtidis2011} find that wealthy and educated individuals are associated with higher risk tolerance and more frequent trading.
+		%
+		%		Our research is also informed by the vast literature on investor psychology. Many such research studies focus on investor overconfidence demonstrated by excessive and/or aggressive trading. \cite{Odean1998} proves that overconfidence in one's information increases one's trading volume, and that overconfidence when manifested by miscalibration, decreases the expected utility of overconfident traders. \cite{Odean1999} demonstrates that investors with reduced trading costs tend to trade excessively, resulting in unsuccessful investments. \cite{Glaser2007} find that investors' overconfidence, when measured by better-than-average effect, is positively related to trading volume; overconfidence measured by miscalibration, however, has little to do with trading volume. \cite{Barber2000} conclude that individuals who trade excessively often gain lower net returns as the superior trading performance does not always compensate for the higher trading costs. \cite{Daniel2015} suggest that unprofitable but excessive active trading can be explained by overconfident beliefs in one's own talents and abilities.
+		%
+		%		Other research studies discuss the disposition effect --  to sell winners and ride losers – a theory established by  \cite{Shefrin1985}. \cite{Odean1998a} demonstrates investors preference for realizing winners over losers, except in the tax optimizing period of December. \cite{Dhar2006} suggest educated individuals exhibit lower disposition bias than their less literate peers. Relatedly, \cite{Kahneman1979} suggest people unwilling to accept losses tend to engage in gambles that are riskier than they would normally tolerate.
+
+	\end{itemize}
+
+\end{frame}
+
+
+\section{Data and Methodology}
+
+\begin{frame}{Sample collection}
+
+\begin{itemize}
+	\item Source: one of the biggest stock trading platforms for retail traders in Switzerland
+	\item $82,072$ traders' status (exit/remain) from 2001-05-04 to 2019-01-29
+	\item $90,628$ traders' trading activity (buy/sell) from 2001-05-08 to 2018-12-31,
+	with in total $6,766,393$ trader-action observations
+	\item $64,037$ traders' daily account value from 2009-01-01 to 2018-12-28,
+	with in total $107,332,300$ account-day observations
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{The model}
+\framesubtitle{Assumptions}
+
+\begin{itemize}
+
+	\item Based on their trading skills, each trader falls in either of the two categories: (i) with trading skills, i.e. good type, denoted by $G$, or (ii) without trading skills, i.e. bad type, denoted by $B$.
+
+	\item Traders do not know their types, but have a prior belief about their probability of being Type $G$ equal to $\pi_0$.
+
+	\item Type $B$ traders never place successful trades with profits sufficient to cover the total trading cost.
+
+	\item For type $G$ traders, successful trades arrive at jump times of a time-inhomogeneous Poisson process, $N_t$, with an exogenously given intensity $f(t)$, namely, $\mathbb P[N_{t+dt}-N_t = 1] = f(t)dt$.
+
+	\item Type $G$ traders improve their trading skills with experience. Thus, $f(t)$ is a monotone increasing function of the trader's trade age, $t$.
+
+	\item Traders learn about their types and continuously update their belief $\pi_t$ from observing their trading history.
+
+	\item Entry of new traders happens at a constant rate $\rho_{entry}$.
+
+	\item Traders exit from trading for two reasons: (i) an exogenous ``exit shock" that occurs at a Poisson intensity $\rho_{exit}$, or (ii) the trader's posterior probability of being Type $G$ dropping below a threshold value, i.e. when the trader becomes sufficiently confident that he is Type $B$.
+
+	\item Each trader has an idiosyncratic running fixed cost of trading $\varphi$
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{Time-inhomogeneous Poisson process}
+The arrival of success becomes increasingly frequent for Type $G$.
+
+	\begin{columns}[t]
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$f(t)=-10e^{-0.02t}+20$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/funcf2}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+	\begin{column}{0.49\textwidth}
+					\begin{block}{$f(t)=-1.5e^{-0.02t}+2$}
+			\begin{figure}
+				\includegraphics[width=\linewidth]{figures/funcf1}
+			\end{figure}
+		\end{block}
+	\end{column}
+\end{columns}
+
+\framebreak
+
+Cum. prob. of no. of successes $n$ achieved by age $t$
+(\textcolor{green}{green}-\textcolor{orange}{orange} fan):
+$\mathbb{P}[N_t < n]
+=  \sum_{k=0}^{n-1} \frac{\left(F(t)\right)^k}{e^{F(t)}k!}$
+
+Expected no. of successes $n$ by age $t$ for Type $G$
+(\textcolor{red}{red}
+line):
+$\mathbb{E}[N_{t}] = F(t)=\int_0^t f(t) dt$
+
+	\begin{columns}[t]
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$f(t)=-10e^{-0.02t}+20$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/probn2}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$f(t)=-1.5e^{-0.02t}+2$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/probn1}
+				\end{figure}
+			\end{block}
+		\end{column}
+	\end{columns}
+
+\framebreak
+
+Probability of experiencing $n$ successes by age $t$ for Type $G$
+(\textcolor{blue}{c}\textcolor{orange}{o}\textcolor{green}{l}\textcolor{red}{o}\textcolor{violet}{r} lines):
+$
+\mathbb{P}[\tau \leq t \,|\, N_{\tau} = n]
+= 1 - \sum_{k=0}^{n-1} \frac{\left(F(t)\right)^k}{e^{F(t)}k!}
+$
+
+Expected time needed to achieve $n$ successes (black diamonds):
+$
+\mathbb{E}[t \,|\, N_t = n] = \int_0^{\infty} \frac{tf(t)(F(t))^{n-1}}{e^{F(t)}(n - 1)!} dt
+$
+	\begin{columns}[t]
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$f(t)=-10e^{-0.02t}+20$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/cdft2}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$f(t)=-1.5e^{-0.02t}+2$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/cdft1}
+				\end{figure}
+			\end{block}
+		\end{column}
+	\end{columns}
+
+
+\framebreak
+
+The belief of being Type $G$ decreases before encountering the first success.
+
+$\pi(t) = \frac{1}{(\frac{1}{\pi_0}-1) e^{F(t)}+1},\ t<\tau_N$
+
+\begin{columns}[t]
+	\begin{column}{0.49\textwidth}
+		\begin{block}{$f(t)=-10e^{-0.02t}+20$}
+			\begin{figure}
+				\includegraphics[width=\linewidth]{figures/pis2}
+			\end{figure}
+		\end{block}
+	\end{column}
+
+	\begin{column}{0.49\textwidth}
+		\begin{block}{$f(t)=-1.5e^{-0.02t}+2$}
+			\begin{figure}
+				\includegraphics[width=\linewidth]{figures/pis1}
+			\end{figure}
+		\end{block}
+	\end{column}
+\end{columns}
+
+\end{frame}
+
+
+
+\begin{frame}[allowframebreaks]{Evolution of belief}
+\begin{block}{}
+
+	\begin{tikzpicture}[
+level distance=3.2cm,
+level 1/.style={sibling distance=1.4cm},
+level 2/.style={sibling distance=0.9cm},
+level 3/.style={level distance =3cm},
+grow'=right]
+\tikzstyle{every node}=[]
+\node (Root) [] {Origin}
+child [] {
+	node {Type $G$}
+	child { node {Succeed}
+		child {node[end] {$\pi_t \, f(t)\,dt$} }
+		edge from parent
+		node[above] {$f(t)\,dt$}
+	}
+	child [black] { node {Fail}
+		child {node[end] {$\pi_t \, (1 - f(t)\,dt)$} }
+		edge from parent
+		node[below] {$1-f(t)\,dt$}
+	}
+	edge from parent
+	node[above] {$\pi_t$}
+}
+child {
+	node {Type $B$}
+	child { node {Succeed}
+		child {node[end] {$0$} }
+		edge from parent
+		node[above] {$0$}
+	}
+	child { node {Fail}
+		child {node[end] {$1-\pi_t$} }
+		edge from parent
+		node[below] {$1$}
+	}
+	edge from parent
+	node[below] {$1-\pi_t$}
+}
+;
+% How I'm applying labels to each level.
+% Need to be able to dynamically align nodes at top level
+\begin{scope}[every node/.style={align=center, anchor=center, font=\bfseries,}]
+\node[above= 0.4cm of Root-1-1-1] (labels-level) {$\mathbb{P}$};
+\node[at =(labels-level-|Root-1-1)] {$t+dt$};
+\node[at =(labels-level-|Root-1)] {$t$};
+
+\end{scope}
+\end{tikzpicture}
+
+\end{block}
+
+$$
+d\pi_t =
+\pi_{t+dt} - \pi_t  = \frac{\pi_t\big(1-f(t)dt\big)}{\pi\big(1-f(t)dt\big)+(1-\pi_t)}  - \pi_t
+ = -f(t)\pi_t (1-\pi_t)dt
+$$
+for $t<\tau_N,$ while $\pi_t=1$ for $t\ge \tau_N.$
+
+\framebreak
+
+Log transformation for mathematical convenience:
+$$
+\ell_t\ =\ \ln\frac{\pi_t}{1-\pi_t}
+$$
+
+By direct calculation, $\ell_t$ follows the dynamics:
+$$
+d\ell_t\ =\ -f(t)dt
+$$ for $t<\tau_N$ and $\ell_t=\infty$ for $t\ge \tau_N.$
+\end{frame}
+
+
+\begin{frame}
+	\begin{figure}[h!]
+		\centering
+	\begin{tikzpicture}
+[
+grow                    = down,
+sibling distance        = 20em,
+level distance          = 5em,
+edge from parent/.style = {draw, -latex},
+every node/.style       = {font=\footnotesize},
+sloped
+]
+\node [root, aspect=2] (count) {
+	$ N_t \ge 1$ ?
+}
+child { node [env] (keep) {
+		Keep trading
+	}
+	edge from parent node [above] {
+		Yes
+} }
+child { node [env] {
+	Find optimal exit boundary belief $\ell_*(t, \varphi)$
+	}
+	child { node [root, aspect=2] (compare) {
+			$\ell_t > \ell_*(t, \varphi)$?
+		}
+		child { node [env] {
+				Stop trading
+			}
+			edge from parent node [above] {
+				No
+		} }
+		edge from parent node [below] {} }
+	edge from parent node [above] {No} };
+
+\draw [curve] (keep.west) to[out=90, in=180] node[above,midway]{$t \leftarrow t + d$} (count.north);
+
+\path
+[line] (compare) -| node  [near start, above] {Yes} (keep);
+	\end{tikzpicture}
+\caption{A trader's decision tree (absent exogenous shock)}
+\label{fig:decision1}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}
+
+\begin{block}{Value functions}
+	\begin{itemize}
+		\item 	Type $G$:
+
+		$
+		V_G(t, \varphi)\ =\ \int_t^\infty e^{-r(s-t)}\big(f(s)-(\varphi + 0.5 c^{-1} \eta^2)\big)ds\
+		$
+
+		\item Type unknown:
+
+		$
+		V(\ell, t, \varphi)\ =\ \max_{\tau_E} \mathbb{E}\Big[
+		-\int_t^{\min\{\tau_E,\tau_N\}}  e^{-r s} (\varphi + 0.5 c^{-1} \eta^2) ds\ +\ e^{-r\tau_N} {\bf 1}_{\tau_N<\tau_E}\big(1\ +\ V_G(\tau_N,\varphi)\big)\Big]
+		$
+	\end{itemize}
+\end{block}
+
+\begin{block}{Theorems}
+		\begin{itemize}
+		\item exit boundary $\ell_*(t,\varphi)$
+
+			$\frac{e^{\ell_*(t,\varphi)}}{e^{\ell_*(t,\varphi)}+1}\ =\ \frac{\varphi}{f(t)(1+V_G(t,\varphi))} $
+	\end{itemize}
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Variables and parameters}
+	\begin{block}{Observable}
+		\begin{itemize}
+			\item $1_{exit}$: account status---closed/open
+			\item $R$ individual trading performance: \textcolor{red}{one-year excess log return}
+			\item $t$ trading age: time since account open
+			\item $m(t)$ total trading mass by age: number of open accounts
+		\end{itemize}
+	\end{block}
+
+	\begin{block}{Unobservable}
+		\begin{itemize}
+			\item Success
+			\item Type ($G$ or $B$) and its distribution
+			\item $\ell$ belief of being Type $G$ and its (conditional) distribution (given type)
+			\item $\varphi$ running cost and its distribution
+			\item Conditional distribution (given type and belief) of $R$
+			\item $\rho_{exit}$ exit rate due to exogenous shock
+		\end{itemize}
+	\end{block}
+
+	\framebreak
+
+	\begin{block}{Other}
+		\begin{itemize}
+			\item $c$ cost factor per trading effort: arbitrarily fixed
+			\item $\rho_{entry}$ entry rate: assumed time invariant
+		\end{itemize}
+
+		\includegraphics[
+		width = 0.7\textwidth]{figures/rouentry-1}
+
+	\end{block}
+
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{Further assumptions}
+	\begin{itemize}
+\item Success arrival intensity: $f(t)=\alpha \, e^\beta + \gamma$, where $\alpha = -10, \beta = -0.02, \gamma = 20$
+\item Discount rate: $r = 0.1$
+\item Constant entry rate: $\rho_{entry} = 1$
+\item Exit rate due to exogenous shock: $\rho_{exit} = 0.4$
+\end{itemize}
+
+\framebreak
+
+\begin{itemize}
+\item Distribution of types at entry: Type $G$ 10\%, Type $B$ 90\%
+\item Distribution of $\varphi$ at entry: uniform distribution on $[0, \varphi^*]$, where $\varphi^* = \alpha + \gamma - 0.5 \, (r + \frac{\alpha \, \beta}{\alpha + \gamma})$
+\item Distribution of belief $\ell_0$ at entry: inverse exponential distribution with $\lambda = 60$ for Type $G$ and $\lambda = 50$ for Type $B$, on $[\ell(0, \varphi), +\infty)$
+\item Distribution of return based on true type and belief:
+\begin{itemize}
+	\item Being $G$ believing $G$: $\mathbb N(2, 0.8^2)$
+	\item Being $G$ believing $B$: $\mathbb N(1, 1^2)$
+	$\leftarrow$ \textit{underconfidence}
+	\item Being $B$ believing $G$: $\mathbb N(-2, 1^2)$
+	$\leftarrow$ \textit{overconfidence}
+	\item Being $B$ believing $B$: $\mathbb N(-1, 1.2^2)$
+\end{itemize}
+	\end{itemize}
+\end{frame}
+
+
+
+
+\begin{frame}{Belief lower boundary $\ell_*(t, \varphi)$}
+	\begin{figure}
+		\colorbox{white}{
+			\includegraphics[
+			height=0.7\textheight
+			]{figures/lstar}}
+	\end{figure}
+
+	$\ell_*(t, \varphi)$ decreases with $t$---but does that translate into exit procrastination?
+\end{frame}
+
+
+\begin{frame}{Initial belief distribution}
+	Inverse exponential distribution on
+	$[\ell - \ell_*(0, \varphi), +\infty)$
+
+	\begin{columns}[t]
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$\varphi = 0.01$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/ldist1}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.49\textwidth}
+			\begin{block}{$\varphi = 9$}
+				\begin{figure}
+					\includegraphics[width=\linewidth]{figures/ldist2}
+				\end{figure}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+
+\section{Empirical results}
+
+\begin{frame}{Evolution of clients' performance}
+
+Higher trading age associated with higher performance: more seasoned clients perform better.
+
+		\begin{columns}[t]
+		\begin{column}{0.495\textwidth}
+			\begin{block}{Original}
+				\begin{figure}
+					\includegraphics[width=\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/returnTS-1}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.495\textwidth}
+			\begin{block}{Demeaned}
+				\begin{figure}
+					\includegraphics[width=\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/returnTS-2}
+				\end{figure}
+			\end{block}
+		\end{column}
+	\end{columns}
+
+
+\end{frame}
+
+
+
+\begin{frame}{Learning effect: more seasoned clients perform better}
+
+\begin{equation}
+\label{eq:rregress}
+R_{i,t} = \alpha_T + \beta^{t} \, t +  \bm{X}_i \bm{\beta}^{\bm{X}} + \epsilon_{i,t}
+\end{equation}
+
+	\begin{table}[h!]
+		\centering
+		\caption{Panel regressions on performance with respect to trading age and other control variables.}
+		\tiny
+		\setlength{\tabcolsep}{0.5pt}
+		\begin{tabular}{@{}lr@{}lr@{}lr@{}lr@{}lr@{}lr@{}l@{}l}
+			\toprule
+			Regressand: return $R_{i,t}$      & (1)   &       & (2)   &       & (3)   &       & (4)   &       & (5)   &  \\
+			\midrule
+			Trading age $t$ (days) & $1.0 \times 10^{-5}$ & $^{***}$   & $1.1 \times 10^{-5}$ & $^{***}$   & $1.1 \times 10^{-5}$ & $^{***}$   & $1.0 \times 10^{-5}$ & $^{***}$   & $1.0 \times 10^{-5}$ & $^{***}$ \\
+			& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} \\
+			Gender (Female = 1) &       &       & 0.0325 & $^{***}$   &       &       &       &       & 0.0293 & $^{***}$ \\
+			& \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} \\
+			Biological age at entry (years) &       &       &       &       & 0.0008 & $^{***}$   &       &       & 0.0007 & $^{***}$ \\
+			& \multicolumn{2}{c}{} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} \\
+			Trades options (Yes = 1) &       &       &       &       &       &       & $-0.0667$ & $^{***}$   & $-0.0658$ & $^{***}$ \\
+			& \multicolumn{2}{c}{} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} \\
+
+			Time effect (dates) & Yes   &       & Yes   &       & Yes   &       & Yes   &       & Yes   &  \\
+			&       &       &       &       &       &       &       &       &       &  \\
+			No. obs.     & \multicolumn{2}{c}{      106,564,611 } & \multicolumn{2}{c}{      106,564,611 } & \multicolumn{2}{c}{      106,398,965 } & \multicolumn{2}{c}{      106,564,611 } & \multicolumn{2}{c}{      106,564,611 } \\
+			$R^2$    & 0.001 &       & 0.001 &       & 0.002 &       & 0.003 &       & 0.003 &  \\
+			\bottomrule
+		\end{tabular}%
+	\end{table}%
+
+\begin{block}{Significantly positive $\beta^t$}
+Trading age positively correlated with performance.
+\end{block}
+
+
+\end{frame}
+
+
+\begin{frame}{Learning effect: surviving clients learn faster}
+	\begin{figure}
+		\caption{Evolution of performance rank as trading age increases for fixed cohorts}
+			\includegraphics[width= 0.7\textwidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/trreturnquantile-1}
+	\end{figure}
+\end{frame}
+
+
+
+\begin{frame}{Learning effect: surviving clients learn faster}
+
+	\begin{equation}
+	\label{eq:rregress}
+	R_{i,t} = \alpha_T + \beta^{t} \, t +  \bm{X}_i \bm{\beta}^{\bm{X}} + \epsilon_{i,t},
+	\end{equation}
+
+	\begin{table}[h!]
+		\centering
+		\caption{Effect of trading age on performance for lifetime-classified cohorts at different stages of trading life.}
+		\tiny
+		\setlength{\tabcolsep}{2pt}
+    \begin{tabular}{lr@{}lr@{}lr@{}lr@{}lr@{}lr@{}lr@{}lr@{}lr}
+	\toprule
+	Age range & \multicolumn{4}{c}{1--1.5 years} & \multicolumn{4}{c}{1.5--2 years} & \multicolumn{4}{c}{2--3.5 years} & \multicolumn{4}{c}{3.5--5 years} &  \\
+	Cohort      &  &  $\overline{\alpha}$     &       &  $\beta$     &       &    $\overline{\alpha}$   &       &  $\beta$      &       &  $\overline{\alpha}$    &       &   $\beta$     &       &   $\overline{\alpha}$    &       &    $\beta$         & $n$ \\
+	\cmidrule(lr){2-5}  \cmidrule(lr){6-9}   \cmidrule(lr){10-13}   \cmidrule(lr){14-17}  \cmidrule(l){18-18}
+	2-year &  39.8 &$^{***}$        &  0.0129     & $^{***}$       &       45.0&$^{***}$        &       0.0025 & $^{***}$       &       &       &       &       &       &       &       &       &   25,599 \\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)}   &       &       &       &       &       &       &       &       &  \\
+	\cmidrule{1-18}
+	3.5-year &  40.4 &$^{***}$        &  0.0138      & $^{***}$    &   46.1&$^{***}$        &       0.0024 & $^{***}$       &     46.6& $^{***}$       &     0.0009 &$^{***}$      &       &       &       &       &   19,330 \\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)}   &      \multicolumn{2}{c}{(0.000)}       & \multicolumn{2}{c}{(0.000)} &       &       &       &       &   \\
+	\cmidrule{1-18}
+	5-year &  40.1&$^{***}$        &  0.0152      & $^{***}$       &  46.1  &$^{***}$        &       0.0035 & $^{***}$       &   47.4& $^{***}$       &   0.0007 &$^{***}$      &       49.0& $^{***}$       &       0.0001 &  $^{**}$      &   13,772\\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)}   &       \multicolumn{2}{c}{(0.000)}       &       \multicolumn{2}{c}{(0.000)}        &    \multicolumn{2}{c}{(0.000)}  &    \multicolumn{2}{c}{(0.013)}    &   \\
+	\midrule
+	2to5  &  39.6 &$^{***}$        &  0.0060        & $^{***}$       &  41.1&$^{***}$        &      0.0020 & $^{***}$       &       &       &   &     &       &       &       &      &   2,547\\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)}   &       &       &       &       &       &       &       &       &   \\
+	\bottomrule
+\end{tabular}
+\label{tab:regressrank}
+\end{table}%
+
+\begin{block}{Higher $\beta^t$ for longer surviving cohorts}
+Longer surviving clients learn faster.
+\end{block}
+
+
+\end{frame}
+
+
+
+\begin{frame}{Performance: exiting vs remaining}
+
+Original
+\vskip -0.65cm
+	\begin{columns}[t]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\footnotesize Lowest trading age tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ReturnbyAgeExit-1}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\footnotesize Middle trading age tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ReturnbyAgeExit-2}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+			\begin{column}{0.32\textwidth}
+		\begin{block}{\footnotesize Highest trading age tertile}
+			\begin{figure}
+				\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ReturnbyAgeExit-3}
+			\end{figure}
+		\end{block}
+	\end{column}
+	\end{columns}
+\vskip 0.2cm
+
+Demeanded
+\vskip -0.65cm
+	\begin{columns}[t]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\footnotesize Lowest trading age tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ReturnbyAgeExit-4}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\footnotesize Middle trading age tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ReturnbyAgeExit-5}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\footnotesize Highest trading age tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ReturnbyAgeExit-6}
+				\end{figure}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+
+\begin{frame}{Clients exit due to poor performance}
+
+	\begin{equation}
+	\label{eq:rregress}
+\ln h_i(t \,|\, R_{i,t},\bm{X}_i(t)) = \ln h_{0}(t) + \ln \alpha_i(t) + \beta^R R_{i,t} + \bm{X}_i(t) \bm{\beta}^{\bm{X}}
+	\end{equation}
+
+	\begin{table}[h!]
+		\centering
+		\caption{Cox proportional hazard regressions with respect to trading performance and other control variables}
+		\tiny
+		\setlength{\tabcolsep}{2pt}
+    \begin{tabular}{@{}lr@{}lr@{}l@{}}
+	\toprule
+	Regressand: log hazard $\ln h_i(t)$    & (1)& & (2)& \\ \midrule
+	One-year log return $R_{i,t}$ & $-0.7696$ & $^{***}$ & $-0.7833$ & $^{***}$ \\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} \\
+	Gender (Female = 1) &       & \multicolumn{1}{l}{} & $0.2563$ & $^{***}$ \\
+	& \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.000)} \\
+	Biological age at entry (years) &       & \multicolumn{1}{l}{} & $0.0019$ & $^{**}$ \\
+	& \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.022)} \\
+	Trades Options (Yes = 1) &       & \multicolumn{1}{l}{} & $-0.0133$ &  \\
+	& & & (0.746) & \\
+	Individual effect & Yes   &       & Yes   &  \\
+	&       &       &       &  \\
+	Concordance & 0.563 &       & 0.567 &  \\
+	No. obs.   & \multicolumn{2}{r}{ 106,564,611 } & \multicolumn{2}{r}{ 106,398,965 } \\
+	\bottomrule
+\end{tabular}
+		\label{tab:regressrank}
+	\end{table}%
+
+\begin{block}{Significantly negative $\beta^R$}
+Poor performance increases exit likelihood.
+\end{block}
+
+\end{frame}
+
+
+
+\begin{frame}{Trading age vs exit likelihood}
+
+Higher trading age associated with lower exit likelihood with performance level controlled for: exit procrastination (Lindy's Law)?
+
+	\begin{columns}[t]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\small Lowest return tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ExitTS-1}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\small Middle return tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ExitTS-2}
+				\end{figure}
+			\end{block}
+		\end{column}
+
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\small Highest return tertile}
+				\begin{figure}
+					\includegraphics[width=1.02\linewidth, trim={10 30 10 18},clip]{../../../../../Dropbox/LearningToTrade/figure/ExitTS-3}
+				\end{figure}
+			\end{block}
+		\end{column}
+	\end{columns}
+
+\end{frame}
+
+
+
+\begin{frame}[shrink=10]{Trading age vs exit likelihood}
+
+	\begin{equation}
+	\label{eq:rregress}
+E_{i,t} = \alpha_T + \beta^t \, t + \beta^R R_{i,t} + \bm{X}_i \bm{\beta}^{\bm{X}} + \epsilon_{i,t}
+	\end{equation}
+
+$E_{i,t}$: at time $t$ client $i$ exit = 1, remain = 0.
+
+	\begin{table}[h!]
+		\centering
+		\caption{Logistic regressions on exit with regard to trading age and other control variables}
+		\tiny
+		\setlength{\tabcolsep}{0pt}
+\begin{tabular}{@{}l@{}r@{}lr@{}lr@{}lr@{}lr@{}lr@{}lr@{}l@{}l@{}}
+	\toprule
+	& \multicolumn{4}{c}{Full sample} & \multicolumn{4}{c}{Subsample: age $< 3$ yr} & \multicolumn{4}{c}{Subsample: age $\geq 3$ yr}  \\
+	& \multicolumn{2}{c}{(1)} & \multicolumn{2}{c}{(2)} & \multicolumn{2}{c}{(3)} & \multicolumn{2}{c}{(4)} & \multicolumn{2}{c}{(5)} & \multicolumn{2}{c}{(6)} \\
+	\cmidrule(lr){2-5}  \cmidrule(lr){6-9}   \cmidrule(lr){10-13}
+	Trading age (days) $t$ & $-10.6 \times 10^{-5}$ & $^{***}$   & $-10.6 \times 10^{-5}$ & $^{***}$   & $1.0 \times 10^{-5}$ & $^{***}$   & $1.0 \times 10^{-5}$ & $^{***}$   & $-14.9\times 10^{-5}$ & $^{***}$   & $-14.9\times 10^{-5}$ & $^{***}$ \\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} \\
+	One-year log return $R_{i,t}$ & $-0.2747$ & $^{***}$   & $-0.2877$ & $^{***}$   & $-0.2971$ & $^{***}$   & $-0.3020$ & $^{***}$   & $-0.2709$ & $^{***}$   & $-0.2834$ & $^{***}$ \\
+	& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} \\
+	Gender (Female = 1) &       &       & 0.1921 & $^{***}$   &       &       & 0.1358 & $^{***}$   &       &       & 0.2056 & $^{***}$ \\
+	& \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} \\
+	Biological age at entry (years) &       &       & 0.0030 & $^{***}$   &       &       & $-0.0035$ & $^{***}$   &       &       & 0.0052 & $^{***}$ \\
+	& \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} \\
+	Trades options (Yes = 1) &       &       & $-0.0515$ & $^{***}$   &       &       & $-0.1382$ & $^{***}$   &       &       & $-0.0168$ &  \\
+	& \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{} & \multicolumn{2}{c}{(0.585)} \\
+	Time effect (dates) & Yes   &       & Yes   &       & Yes   &       & Yes   &       & Yes   &       & Yes   &  \\
+	&       &       &       &       &       &       &       &       &       &  \\
+	No. obs.   &    98,533,540  &       &    98,372,371  &       &   22,914,154  &       &   22,893,456  &       &   75,619,386  &       &   75,478,915  &  \\
+	\bottomrule
+\end{tabular}
+		\label{tab:regressrank}
+	\end{table}%
+
+\begin{block}{Significantly negative $\beta^t$ after initial trading period}
+Lower exit likelihood with the increase of trading age.
+\end{block}
+
+\end{frame}
+
+
+\begin{frame}{Testing correlation between trading age at exit and performance at exit}
+
+$$
+\text{Performance}_{i, t^E_i} = \alpha + \beta^{t^E} \, t^E_i + \bm{X}_i \bm{\beta}^{\bm{X}} + \epsilon_{i,t}
+$$
+
+{\em Rank as performance proxy: relative rank compared to peer investors}
+
+\begin{table}[h!]
+	\centering
+	\caption{Panel A: Performance proxy controlled for calendar time effects.}
+	\setlength{\tabcolsep}{3pt}
+	\tiny
+	\begin{tabular}{@{}l@{}r@{}lr@{}lr@{}lr@{}lr@{}lr@{}l@{}l}
+		\toprule
+		$\text{Performance}_{i, t^E_i}  = Rank_{i,t^E_i}$		& (1)   &       & (2)   &       & (3)   &       & (4)   &       & (5)   &  \\
+		\midrule
+		Intercept & 0.4175 & ***   & 0.4124 & ***   & 0.3982 & ***   & 0.4194 & ***   & 0.3988 & *** \\
+		& \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} \\
+		Trading age at exit (days) $t^E_i$ & $0.9\times 10^{-5}$  & ***   & $1.0 \times 10^{-5}$  & ***   & $0.8\times 10^{-5}$  & ***   & $0.9\times 10^{-5}$  & ***   & $0.8\times 10^{-5}$  & *** \\
+		& \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} & \multicolumn{2}{r}{(0.000)} \\
+		Gender (Female = 1) &       &       & 0.0282 & ***   &       &       &       &       & 0.0256 & *** \\
+		& \multicolumn{2}{r}{} & \multicolumn{2}{r}{(0.001)} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{(0.002)} \\
+		Biological age at entry (years) &       &       &       &       & 0.0005 & ***   &       &       & 0.0004 & ** \\
+		& \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{(0.009)} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{(0.031)} \\
+		TradesOptions (Yes = 1) &       &       &       &       &       &       & $-0.0252$ & **    & $-0.0249$ & ** \\
+		& \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{(0.040)} & \multicolumn{2}{r}{(0.043)} \\
+		&       &       &       &       &       &       &       &       &       &  \\
+		$R^2$  & 0.0015 &       & 0.0028 &       & 0.0022 &       & 0.0020 &       & 0.0036 &  \\
+		No. obs.   & 9,665  &       & 9,665  &       & 9.608  &       & 9,665  &       & 9,608  &  \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:ols}
+\end{table}
+
+\end{frame}
+
+
+\begin{frame}{}
+
+{\em Rank of rank as performance proxy: relative rank of  relative rank history}
+
+$$
+Rank^S_{i, t} = \frac{O^S_{i,t}}{t^E_i}
+$$
+	\begin{table}[h!]
+		\centering
+		\caption{Panel B: Performance proxy controlled for both calendar time and individual effects.}
+		\tiny
+		\setlength{\tabcolsep}{0.1pt}
+		\begin{tabular}{@{}l@{}r@{}lr@{}lr@{}lr@{}lr@{}lr@{}l@{}l}
+		\toprule
+		$\text{Performance}_{i, t^E_i}  = Rank^S_{i,t^E_i}$ & (1)   &       & (2)   &       & (3)   &       & (4)   &       & (5)   &  \\
+		\midrule
+		Intercept & 0.4906 & $^{***}$   & 0.4932 & $^{***}$   & 0.5080 & $^{***}$   & 0.4891 & $^{***}$   & 0.5072 & $^{***}$ \\
+		& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} \\
+		Trading age at exit (days) $t^E_i$ & $-1.1\times 10^{-5}$ & $^{***}$   & $-1.1\times 10^{-5}$ & $^{***}$   & $-1.0\times 10^{-5}$ & $^{***}$   & $-1.0\times 10^{-5}$ & $^{***}$   & $-1.0\times 10^{-5}$ & $^{***}$ \\
+		& \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} & \multicolumn{2}{c}{(0.000)} \\
+		Gender (Female = 1) &       &       & $-0.0148$ & $^{*}$     &       &       &       &       & $-0.0130$ &  \\
+		& \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.097)} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.150)} \\
+		Biological age at entry (years) &       &       &       &       & $-0.0004$ & $^{**}$    &       &       & $-0.0004$ & $^{*}$ \\
+		& \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.043)} & \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.070)} \\
+		Trades Options (Yes = 1) &       &       &       &       &       &       & 0.0201 &       & 0.0198 &  \\
+		& \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{r}{} & \multicolumn{2}{c}{(0.135)} & \multicolumn{2}{c}{(0.142)} \\
+		&       &       &       &       &       &       &       &       &       &  \\
+		$R^2$  & 0.0016 &       & 0.0019 &       & 0.0020 &       & 0.0018 &       & 0.0025 &  \\
+		No. obs.   & 9,665  &       & 9,665  &       & 9,608  &       & 9,665  &       & 9,608  &  \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:ols}
+\end{table}
+
+The higher the trading age, the lower the performance at exit: traders become ``easier''  on themselves, more tolerant of poor performance as the trading age goes.
+\end{frame}
+
+
+
+
+\begin{frame}{Summary}
+We build a model which demonstrates, in accordance with empirical findings, that:
+\begin{itemize}
+\item Experienced traders perform on average better than inexperienced traders.
+\item Nevertheless, survivorship bias does not explain everything: at a given performance level, experienced traders are less likely to exit than inexperienced traders.
+\begin{itemize}
+	\item There exists a downward moving exit boundary.
+\end{itemize}
+\item Inexperienced traders trade more intensively, possibly in order to discover their trading skill level.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{References}
+	\bibliographystyle{apalike}
+	\bibliography{trading}
+\end{frame}
+
+\begin{frame}
+\Huge{\centerline{The End}}
+\end{frame}
+
+\end{document}
