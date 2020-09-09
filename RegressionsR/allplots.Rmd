@@ -1,0 +1,1325 @@
+---
+title: "Learning (not) to Trade"
+author: "Java"
+output:
+  pdf_document:
+    keep_tex: yes
+    includes:
+      in_header: diss.sty
+  html_notebook: default
+  html_document: default
+  word_document: default
+---
+
+```{r echo = F, results='hide', warning=F, message=F}
+library(data.table)
+library(tidyr)
+library(lubridate)
+library(lattice)
+library(openintro)
+library(zoo)
+library(pracma)
+library(nloptr)
+library(speedglm)
+library(timeDate)
+library(spatstat)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(magrittr)
+library(survival)
+library(plm)
+library(pglm)
+library(Rchoice)
+library(parallel)
+
+knitr::opts_chunk$set(dev='tikz', echo = F, cache = F, eval = F, message = F, warning = F)
+
+options(stringsAsFactors = F,
+        datatable.WhenJisSymbolThenCallingScope = T)
+```
+
+```{r include = F, eval = T, echo = F}
+datapath = './data/'
+mypar <- par(xpd = F)
+mypar$bty = 'l'
+mypar$mgp = c(1.5,0.5,0)
+
+sigstar = data.frame(thresh=c(0,0.01,0.05,0.1),stars=c('***','**','*',''))
+
+funcstar = function(p){
+  ss = p %>% lapply(function(x) which(x>=sigstar[,1]) %>% max %>% sigstar[.,2]) %>% unlist
+  ss[is.na(ss)]=''
+  ss
+}
+
+funks = function(series1,series2){
+  p = ks.test(series1, series2)$p
+  pf= formatC(p, digits = 3, format = 'f')
+  p2 = t.test(series1, series2, na.action=na.omit, alternative = 'two.sided', mu = 0, paired = F, conf.level = 0.95)$p.value
+  p2f = formatC(p2, digits = 3, format = 'f')
+  # p1 = p2/2
+  # p1f = formatC(p1, digits = 3, format = 'f')
+  
+  corners = par("usr")
+  
+  mtext(paste0('KS-test: $p=',pf,'$',funcstar(p),
+'\nt-test: $p=',p2f,'$',funcstar(p2)
+               ),side=3, line = 0, cex = 1)
+}
+
+
+funcmeanconf = function(series){
+  list(mret = mean(series, na.rm = T),
+       conf1 = t.test(series)$conf.int[1],
+       conf2 = t.test(series)$conf.int[2])
+}
+
+funcplotband = function(seriesx, seriesy, conf1, conf2, col){
+  lines(seriesx, seriesy, col = col)
+  polygon(x=c(seriesx,rev(seriesx)), y = c(conf1, rev(conf2)), col = adjustcolor(col, 0.3), border = NA)
+}
+```
+
+```{r surv, eval=F}
+load('regtable.rda' %>% paste0(datapath, .))
+wt = 1/(regtable$firstobs %>% table)
+
+regtable[, wt := wt[as.character(firstobs)]]
+
+# regtable[, list(ttl = sum(wt))]
+
+funcempsurv = function(mindate, maxdate, col){
+  clientage = regtable[firstobs > mindate & firstobs <= maxdate, list(
+  age = seq(from = 0.25, to = as.numeric(lifetime), by = 1),
+  uncensored = uncensored,
+  lifetime = as.numeric(lifetime),
+  wt = wt
+ ), by = client]
+clientage[, exitnextyr := ifelse(uncensored & age > lifetime - 365.2425, T, F)]
+survtbl = clientage[, list(mort = sum(exitnextyr * wt, na.rm = T)/sum(wt, na.rm = T)), by = age]
+lines(survtbl$age[-(nrow(survtbl)-(0:550))],survtbl$mort[-(nrow(survtbl)-(0:550))], col = col)
+}
+
+clientage = regtable[, list(
+  age = seq(from = 0.25, to = as.numeric(lifetime), by = 1),
+  uncensored = uncensored,
+  lifetime = as.numeric(lifetime),
+  wt = wt
+ ), by = client]
+clientage[, exitnextyr := ifelse(uncensored & age > lifetime - 365.2425, T, F)]
+survtbl = clientage[, list(mort = sum(exitnextyr * wt, na.rm = T)/sum(wt, na.rm = T)), by = age]
+plot(survtbl$age[-(nrow(survtbl)-(0:550))],survtbl$mort[-(nrow(survtbl)-(0:550))], type = 'l')
+
+funcempsurv('2001-07-01', '2007-01-01', 'green')
+funcempsurv('2007-01-01', '2012-07-01', 'blue')
+funcempsurv('2002-07-01', '2018-01-01', 'red')
+
+funcempsurv('2002-01-01', '2010-01-01', 'grey')
+funcempsurv('2010-01-01', '2018-01-01', 'orange')
+
+
+
+
+survtbl = clientage[, list(mort = sum(exitnextyr, na.rm = T)/.N), by = age]
+
+plot(survtbl$age[1:5000],survtbl$mort[1:5000], type = 'l')
+
+
+svft = survfit(Surv(time=round(lifetime), event=uncensored) ~ 1, 
+                 data = regtable, weights = regtable$wt)
+
+# svft = survfit(Surv(time=round(lifetime), event=uncensored) ~ 1,
+#                  data = regtable)
+
+survtable = approx(x = svft$time, y = svft$n.risk, xout = c(0, seq(length.out = svft$time %>% max)))
+
+survtable$mort = c(0, diff(-survtable$y))
+survtable$yearmortality = rollsum(survtable$mort, 365, align = 'left', fill = NA)/survtable$y
+
+plot(survtable$x[1:5000],survtable$yearmortality[1:5000], type = 'l')
+
+```
+
+```{r desc, eval=F}
+load('regtable.rda' %>% paste0(datapath, .))
+load('cl_transferin.rda' %>% paste0(datapath, .))
+popweight = regtable[, list(wt = 1/(.N)), by = firstobs][order(firstobs)]
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       # , cl_transferout
+                       ))
+  ), list(
+    firstobs = firstobs,
+    closing_date = closing_date,
+    lastobs = lastobs
+  )]
+
+
+data = merge(regtable[, list(close = .N), by = format(closing_date, '%Y-12-31')%>% as.Date],
+      regtable[, list(open = .N), by = format(firstobs, '%Y-12-31') %>% as.Date]
+      )[, ':='(opencum = cumsum(open), closecum = cumsum(close))
+        ][, eop := opencum - closecum][, ymax := eop + close]
+
+names(data)[1] = 'date'
+
+df = data[, c('date', 'open', 'close', 'eop', 'ymax')] %>% 
+  melt(id.vars = c("date", "eop", "ymax")) %>% 
+  mutate(ymin = ymax - value) %>% 
+  rename(group = variable)
+
+step = 90
+# Define xmin and xmax of segments
+df <- df %>% 
+  mutate(xmin = case_when(
+    group == "open" ~ date - step,
+    TRUE ~ date 
+  )) %>% 
+  mutate(xmax = case_when(
+    group == "open" ~ date,
+    TRUE ~ date + step
+  ))
+
+
+# Create waterfall chart
+df %>% 
+  arrange(date) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = xmin,
+                xmax = xmax,
+                ymin = ymin,
+                ymax = ymax,
+                fill = group)) -> p1
+p1
+
+# Create data for line chart
+df2 <- df %>% select(date, eop) %>% distinct()
+
+# Optimize colors, themes & add lines
+p2 <- p1  + 
+  geom_line(aes(date, eop), col = "dodgerblue4", size = 0.8) +
+  geom_point(aes(date, eop), col = "dodgerblue4", size = 1) +
+  geom_text(aes(date, eop, label = eop), vjust = 1.2, 
+            hjust = -0.1, size = 3) +
+  scale_fill_manual(values = c("grey60", "coral2")) +
+  theme_minimal() +
+  theme(
+    axis.line = element_line(color = "gray40", size = 0.5),
+    legend.position = "top") +
+  scale_x_date(breaks = data$date,
+               date_labels = "%Y") +
+  theme(panel.grid.minor.x = element_blank(),
+        legend.title = element_blank()) +
+  xlab("Date") + 
+  ylab("Number of clients")
+p2
+```
+
+```{r DailyExit, eval=T}
+load('regtable.rda' %>% paste0(datapath, .))
+load('cl_transferin.rda' %>% paste0(datapath, .))
+
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       # , cl_transferout
+                       ))
+  ), list(
+    firstobs = firstobs,
+    closing_date = closing_date,
+    lastobs = lastobs
+  )]
+
+if(!(exists('clientdaily'))){
+clientdaily = readRDS('clientdaily365.Rds' %>% paste0(datapath, .))}
+
+temp = clientdaily[is.finite(rreturn365) & account_date < '2017-12-31',
+                   list(account_date = account_date,
+                        closing_date = closing_date,
+                        rreturn365 = rreturn365,
+                        age = age)]
+
+temp[, retpr := ecdf(rreturn365)(rreturn365), by = account_date]
+temp[, retgroup := cut(retpr, seq(0,1,1/3), labels = F)]
+
+temp[, agepr := ecdf(age)(age), by = c('account_date', 'retgroup')]
+temp[, agegroup := cut(agepr, seq(0,1,1/3), labels = F)]
+
+temp[, ':='(retpr = NULL, agepr = NULL)]
+temp = temp[order(account_date)]
+
+par(mypar)
+linecols = c('red', 'blue', 'black')
+for(j in 1:3){
+  tempplot = temp[retgroup == j, list(
+    ttln =.N, 
+    exitn = sum(account_date > closing_date - 365.2425, na.rm = T)
+    ), by = c('account_date', 'agegroup')]
+  
+  plot(c('2010-12-31', '2017-10-01') %>% as.Date, rep(NA,2), # make sure xaxis is date and set range at the same time
+       type = 'l', ylim = c(0, 0.075),
+       xlab = 'Calendar date', ylab = 'Exit rate over the next year')
+  
+  for(i in 1:3){
+    tempplot[agegroup == i, lines(account_date, exitn/ttln, col = linecols[i])]
+  }
+  legend('topleft', lty = 1, legend = c('Highest', 'Middle', 'Lowest') %>% paste(., 'tertile'), 
+       title = 'Trading age', col = linecols %>% rev, bty = 'n')
+  
+  assign(paste0('ExitTS', j), recordPlot()) 
+}
+
+save(ExitTS1, ExitTS2, ExitTS3, file = 'ExitTSplot.rda' %>% paste0(datapath, .))
+
+```  
+
+
+```{r DailyExityoung, eval=F}
+load('regtable.rda' %>% paste0(datapath, .))
+load('cl_transferin.rda' %>% paste0(datapath, .))
+
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       # , cl_transferout
+                       ))
+  ), list(
+    firstobs = firstobs,
+    closing_date = closing_date,
+    lastobs = lastobs
+  )]
+
+if(!(exists('clientdaily'))){
+clientdaily = readRDS('clientdaily365.Rds' %>% paste0(datapath, .))}
+
+# use last year return
+temp = clientdaily[is.finite(rreturn365) & account_date < '2017-12-31' & age < 365.2425 * 3,
+                   list(account_date = account_date,
+                        closing_date = closing_date,
+                        rreturn365 = rreturn365,
+                        age = age)]
+
+temp[, retpr := ecdf(rreturn365)(rreturn365), by = account_date]
+temp[, retgroup := cut(retpr, seq(0,1,1/3), labels = F)]
+
+temp[, agepr := ecdf(age)(age), by = c('account_date', 'retgroup')]
+temp[, agegroup := cut(agepr, seq(0,1,1/2), labels = F)]
+
+temp[, ':='(retpr = NULL, agepr = NULL)]
+temp = temp[order(account_date)]
+
+par(mypar)
+linecols = c('red', 'blue', 'black')
+for(j in 1:3){
+  tempplot = temp[retgroup == j, list(
+    ttln =.N, 
+    exitn = sum(account_date > closing_date - 365.2425, na.rm = T)
+    ), by = c('account_date', 'agegroup')]
+  
+  plot(c('2010-12-31', '2017-10-01') %>% as.Date, rep(NA,2), # make sure xaxis is date and set range at the same time
+       type = 'l', ylim = c(0, 0.08),
+       xlab = 'Calendar date', ylab = 'Exit rate over the next year')
+  for(i in 1:3){
+    tempplot[agegroup == i, lines(account_date, exitn/ttln, col = linecols[i])]
+  }
+  # legend('topleft', lty = 1, legend = c('Highest', 'Middle', 'Lowest') %>% paste(., 'tertile'), 
+  #      title = 'Trading age', col = linecols %>% rev, bty = 'n')
+  
+  assign(paste0('ExitTSyoung', j), recordPlot()) 
+
+}
+
+save(ExitTSyoung1, ExitTSyoung2, ExitTSyoung3, file = 'ExitTSplotyoung.rda' %>% paste0(datapath, .))
+
+```
+
+
+```{r ReturnbyAgeExit, eval=T}
+load('regtable.rda' %>% paste0(datapath, .))
+load('cl_transferin.rda' %>% paste0(datapath, .))
+if(!(exists('clientdaily2')|exists('clientdaily'))){
+clientdaily = readRDS('clientdaily365.Rds' %>% paste0(datapath, .))}
+
+popweight = regtable[, list(wt = 1/(.N)), by = firstobs][order(firstobs)]
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       ))
+  ), list(
+    firstobs = firstobs,
+    closing_date = closing_date,
+    lastobs = lastobs
+  )]
+
+# use last year return
+temp = clientdaily[account_date < '2017-12-31' & is.finite(rreturn365),
+                   list(account_date = account_date,
+                        closing_date = closing_date,
+                   ret =  rreturn365,
+                   firstobs = firstobs,
+                   age = age)]  # %>% merge(popweight) by age-time, no need for weight
+
+temp[, ':='(agepr = ecdf(age)(age)
+             , demeanr = ret - mean(ret, na.rm = T)
+             ), by = account_date]
+temp[, agegroup := cut(agepr, seq(0,1,1/3), labels = F)]
+
+temp[, ':='(agepr = NULL,
+            exinextyr = ifelse(is.na(closing_date), F, account_date > closing_date - 365.2425))]
+
+par(mypar)
+linecols = c('black', 'red')
+
+tempplot = temp[account_date > '2011-03-31', funcmeanconf(ret), by = c('account_date', 'exinextyr', 'agegroup')][order(account_date)]
+
+for(j in 1:3){ #for each age band
+  plot(as.Date('2015-01-01'),NA, #haky way to coerce xaxis to date
+     xlim = c('2011-07-01', '2017-06-30') %>% as.Date, ylim = c(-0.4,0.2), main = '', 
+     xlab = 'Calendar date', ylab = 'Average previous-year log return')
+  for(k in 1:2){ #for remain or exit
+    with(tempplot[agegroup == j & exinextyr == c(F,T)[k]],
+      funcplotband(account_date, mret, conf1, conf2, linecols[k])
+    )
+    temp[agegroup == j & exinextyr == c(F,T)[k], abline(
+      h=mean(ret, na.rm = T), lty = 2, col = linecols[k], lwd = 2
+      )]
+  }
+  
+  legend('bottom', lty = c(1,1,2,2), lwd = c(1,1,2,2), legend = c(
+    'Remain throughout next year', 'Exit during next year', 'Overall mean of remain', 'Overall mean of exit'
+    ), col = linecols, bty = 'n')
+  
+  assign(paste0('ReturnbyAgeExit', j), recordPlot()) 
+}
+
+
+par(mypar)
+tempplot = temp[account_date > '2011-03-31', funcmeanconf(demeanr), by = c('account_date', 'exinextyr', 'agegroup')][order(account_date)]
+
+for(j in 1:3){ #for each age band
+  plot(as.Date('2015-01-01'),NA, #haky way to coerce xaxis to date
+     xlim = c('2011-07-01', '2017-06-30') %>% as.Date, ylim = c(-0.22,0.12), main = '', 
+     xlab = 'Calendar date', ylab = 'Average de-meaned previous-year log return')
+  for(k in 1:2){ #for remain or exit
+    with(tempplot[agegroup == j & exinextyr == c(F,T)[k]],
+      funcplotband(account_date, mret, conf1, conf2, linecols[k])
+    )
+    temp[agegroup == j & exinextyr == c(F,T)[k], abline(
+      h=mean(demeanr, na.rm = T), lty = 2, col = linecols[k], lwd = 2
+      )]
+  }
+  
+  legend('bottomright', lty = c(1,1,2,2), lwd = c(1,1,2,2), legend = c(
+    'Remain throughout next year', 'Exit during next year', 'Overall mean of remain', 'Overall mean of exit'
+    ), col = linecols, bty = 'n', xpd = T)
+  
+  assign(paste0('ReturnbyAgeExitdemean', j), recordPlot()) 
+}
+
+
+save(ReturnbyAgeExit1, ReturnbyAgeExit2, ReturnbyAgeExit3, 
+     ReturnbyAgeExitdemean1, ReturnbyAgeExitdemean2, ReturnbyAgeExitdemean3, 
+     file = 'ReturnbyAgeExit.rda' %>% paste0(datapath, .))
+
+```  
+
+```{r logreturnTS, eval=T}
+load('regtable.rda' %>% paste0(datapath, .))
+load('cl_transferin.rda' %>% paste0(datapath, .))
+load('SMI.rda' %>% paste0(datapath, .))
+
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       ))
+  ), list(
+    firstobs = firstobs,
+    closing_date = closing_date,
+    lastobs = lastobs
+  )]
+
+if(!(exists('clientdaily2')|exists('clientdaily'))){
+clientdaily = readRDS('clientdaily365.Rds' %>% paste0(datapath, .))}
+
+manra365 = clientdaily[is.finite(rreturn365), funcmeanconf(rreturn365), by = account_date][order(account_date)]
+  
+  
+par(mypar)
+SMI[,plot(account_date, smi365, type = 'l', 
+          xlim =c('2011-01-01','2018-06-30') %>% as.Date, ylim = c(-0.42,0.32),
+    xlab = 'Calendar date', ylab = 'Previous-year log return')]
+with(manra365, funcplotband(account_date, mret, conf1, conf2, 'red'))
+
+abline(h = 0, col = 'gray')
+legend('bottom', lty = 1, legend = c('SMI', 'Average client'), col = c('black','red'), bty = 'n')
+logreturnTS = recordPlot()
+
+save(logreturnTS, file = 'logreturnTS.rda' %>% paste0(datapath, .))
+```
+
+```{r DailyReturn, eval=T}
+# remember to always use after 2010 data for age-return relationship -- because we do not have data before that
+if(!(exists('clientdaily2')|exists('clientdaily'))){
+clientdaily = readRDS('clientdaily365.Rds' %>% paste0(datapath, .))}
+
+# 365-day return
+# backward -- based on your current age percentile, what was your historical 365-day return
+temp2 = clientdaily[account_date < '2018-12-31' & !is.na(rreturn365),
+                   list(account_date = account_date,
+                   ret =  rreturn365,
+                   age = age)]
+temp2[, ':='(agepr = ecdf(age)(age)
+             , demeanr = ret - mean(ret, na.rm = T)
+             ), by = account_date]
+
+temp2[, agegroup := cut(agepr, seq(0,1,1/3), labels = F)]
+
+par(mgp=c(1.5,0.5,0), xpd = F, bty = 'l')
+linecols = c('red', 'blue', 'black')
+
+temp = temp2[, funcmeanconf(demeanr), by = c('account_date', 'agegroup')][order(account_date)]
+yrange = c(-0.07,0.05) #range(temp$mret, na.rm = T)
+plot(as.Date('2015-01-01'),NA, #haky way to coerce xaxis to date
+     xlim =c('2011-01-01','2018-06-30') %>% as.Date, ylim = yrange, main = '', 
+     xlab = 'Calendar date', ylab = 'Average de-meaned previous-year log return')
+
+for(i in 1:3){
+with(temp[agegroup == i], funcplotband(account_date, mret, conf1, conf2, linecols[i]))  
+}
+
+legend('bottomright', lty = 1, legend = c('Highest', 'Middle', 'Lowest') %>% paste(., 'tertile'), 
+       title = 'Trading age', col = linecols %>% rev, bty = 'n', xjust = 1, xpd = T)
+
+assign('AvgReturnTSdemean', recordPlot())
+
+
+temp = temp2[, funcmeanconf(ret), by = c('account_date', 'agegroup')][order(account_date)]
+yrange = c(-0.4,0.3) #range(temp$mret, na.rm = T)
+plot(as.Date('2015-01-01'),NA, #haky way to coerce xaxis to date
+     type = 'l', ylim = yrange, 
+     xlim =c('2011-01-01','2018-06-30') %>% as.Date, main = '', 
+     xlab = 'Calendar date', ylab = 'Average previous-year log return')
+
+for(i in 1:3){
+with(temp[agegroup == i], funcplotband(account_date, mret, conf1, conf2, linecols[i]))  
+}
+
+legend('bottomright', lty = 1, legend = c('Highest', 'Middle', 'Lowest') %>% paste(., 'tertile'), 
+       title = 'Trading age', col = linecols %>% rev, bty = 'n', xpd = T)
+
+assign('AvgReturnTS', recordPlot()) 
+
+save(AvgReturnTS, AvgReturnTSdemean, file = 'returnTS.rda' %>% paste0(datapath, .))
+```
+
+```{r retquantilefolonecohortcum, eval=F}
+load('optiontaders.rda' %>% paste0(datapath, .))
+load('cl_transferin.rda' %>% paste0(datapath, .))
+
+load('regtable.rda' %>% paste0(datapath, .))
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin))
+  )]
+
+if(!(exists('clientdaily2')|exists('clientdaily'))){
+clientdaily = readRDS('clientdaily365.Rds' %>% paste0(datapath, .))}
+
+
+trselscum = list()
+
+temp0 = clientdaily[is.finite(rreturn365),
+                   list(
+                     client= client,
+                     account_date = account_date,
+                     ret =  rreturn365,
+                     age = age)][, ':='(
+                     retpr = ecdf(ret)(ret)), by = account_date]
+
+
+pickage = c(2, 3.5, 5) * 364.2425 # pick an age
+
+trselsplm = list()
+ns = c()
+for (k in 1:length(pickage)){ # pick an age
+  
+  i = pickage[k]
+  popu = regtable[lifetime >= i & firstobs >= '2009-01-01']$client
+  temp = temp0[age <= i & client %in% popu]
+  ns = c(ns, temp$client %>% unique() %>% length())
+  gc()
+  
+  trselsplm[[k]] = pdata.frame(temp[, c('client', 'account_date', 'age', 'retpr')], index=c('client', 'account_date'), row.names = F)
+  trsel = temp[, c(n=.N, funcmeanconf(retpr)), by = age][order(age)]
+  trselscum[[k]] = trsel
+ 
+  print(k)
+ }
+
+
+#exited after two years and before 5
+  popu = regtable[lifetime >= 2 * 364.2425 & lifetime <= 5 * 364.2425 & 
+                    is.finite(closing_date) & firstobs >= '2009-01-01']$client
+  temp = temp0[client %in% popu]
+  
+  trselsplm[[k+1]] = pdata.frame(temp[, c('client', 'account_date', 'age', 'retpr')], index=c('client', 'account_date'), row.names = F)
+  
+  gc()
+  trsel = temp[age < 2 * 364.2425, c(n=.N,funcmeanconf(retpr)), by = age][order(age)]
+  trselscum[[k+1]] = trsel
+  ns = c(ns, temp$client %>% unique() %>% length())
+
+clr = c('cadetblue4', 'orange', 'darkolivegreen2', 'black')
+    
+par(mgp=c(1.5,0.5,0), xpd = F)
+plot(NULL, type = 'l', bty = 'l', 
+     xlab = 'Trading age (days)', ylab = 'Mean relative rank of one-year log return', 
+     xlim = c(365, pickage %>% max), ylim = c(0.4, 0.498)
+     )
+
+for(i in 1:4){
+  with(trselscum[[i]], funcplotband(age, mret, conf1, conf2, clr[i]))
+}
+legend('right', lty = 1, col = clr, legend = 
+              c(2, 3.5, 5) %>% paste('$>', ., '$ years') %>%
+              c('$> 2$ and $< 5$ years') %>% 
+              paste0(' ($n = ', ns %>% format(big.mark = ','),'$)'), title = 'Trading age at exit', bty = 'n', xpd = T)  
+     
+trreturnquantile =  recordPlot()
+save(trreturnquantile, file = 'trreturnquantile.rda' %>% paste0(datapath, .))
+```
+
+```{r eval=F}
+
+    
+    
+    
+    
+    
+# when age is aligned, using plm/lm seems not make a difference 
+xx11 = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age < 365.2425*1.5,])
+xx11%>% fixef %>% t.test
+xx21 = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age < 365.2425*1.5,])
+xx21%>% fixef %>% t.test
+xx31 = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age < 365.2425*1.5,])
+xx31%>% fixef %>% t.test
+xx41 = plm(retpr~age, data = trselsplm[[4]][trselsplm[[4]]$age < 365.2425*1.5,])
+xx41%>% fixef %>% t.test
+
+xx12 = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age >= 365.2425*1.5 & trselsplm[[1]]$age < 365.2425*2,])
+xx12%>% fixef %>% t.test
+xx22 = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age >= 365.2425*1.5 & trselsplm[[2]]$age < 365.2425*2,])
+xx22%>% fixef %>% t.test
+xx32 = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*1.5 & trselsplm[[3]]$age < 365.2425*2,])
+xx32%>% fixef %>% t.test
+xx42 = plm(retpr~age, data = trselsplm[[4]][trselsplm[[4]]$age >= 365.2425*1.5 & trselsplm[[4]]$age < 365.2425*2,])
+xx42%>% fixef %>% t.test
+
+
+xx23 = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age >= 365.2425*2 & trselsplm[[2]]$age < 365.2425*3.5,])
+xx23%>% fixef %>% t.test
+xx33 = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*2 & trselsplm[[3]]$age < 365.2425*3.5,])
+xx33%>% fixef %>% t.test
+
+xx34 = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*3.5 & trselsplm[[3]]$age < 365.2425*5,])
+xx34%>% fixef %>% t.test
+
+
+# when age is aligned, using plm/lm seems not make a difference 
+xx11t = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age < 365.2425*1.5,], effect = 'time')
+xx11t %>% fixef %>% t.test
+
+xx21t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age < 365.2425*1.5,], effect = 'time')
+xx21t %>% fixef %>% t.test
+
+xx31t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age < 365.2425*1.5,], effect = 'time')
+xx31t %>% fixef %>% t.test
+
+xx41t = plm(retpr~age, data = trselsplm[[4]][trselsplm[[4]]$age < 365.2425*1.5,], effect = 'time')
+xx41t %>% fixef %>% t.test
+
+
+xx12t = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age >= 365.2425*1.5 & trselsplm[[1]]$age < 365.2425*2,], effect = 'time')
+xx12t %>% fixef %>% t.test
+
+xx22t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age >= 365.2425*1.5 & trselsplm[[2]]$age < 365.2425*2,], effect = 'time')
+xx22t %>% fixef %>% t.test
+
+xx32t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*1.5 & trselsplm[[3]]$age < 365.2425*2,], effect = 'time')
+xx32t %>% fixef %>% t.test
+
+xx42t = plm(retpr~age, data = trselsplm[[4]][trselsplm[[4]]$age >= 365.2425*1.5 & trselsplm[[4]]$age < 365.2425*2,], effect = 'time')
+xx42t %>% fixef %>% t.test
+
+
+xx23t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age >= 365.2425*2 & trselsplm[[2]]$age < 365.2425*3.5,], effect = 'time')
+xx23t %>% fixef %>% t.test
+
+xx33t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*2 & trselsplm[[3]]$age < 365.2425*3.5,], effect = 'time')
+xx33t %>% fixef %>% t.test
+
+xx34t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*3.5 & trselsplm[[3]]$age < 365.2425*5,], effect = 'time')
+xx34t %>% fixef %>% t.test
+
+
+# mean(fixef(<yourmodel>)) mean intercept?
+
+xx1 = plm(retpr~age, data = trselsplm[[1]])
+xx2 = plm(retpr~age, data = trselsplm[[2]])
+xx3 = plm(retpr~age, data = trselsplm[[3]])
+# here age is not aligned, so it makes a difference to have individual effect
+xx4 = plm(retpr~age, data = trselsplm[[4]])
+
+
+   trselscum[[3]][1:NROW(trsel), plot(age, mretq, type = 'l', bty = 'l', xlab = 'Trading age (days)', ylab = 'Mean relative rank of one-year log return'
+                                    , ylim = c(0.435, 0.498)
+                                    , lwd = 1, col = clr[3])]
+   
+  trselscum[[3]][, polygon(x=c(age,rev(age)), y = c(conf1, rev(conf2)), col = adjustcolor(clr[3], 0.2), border = NA)]
+   
+    trselscum[[2]][1:NROW(trsel), lines(age, mretq, type = 'l', lwd = 1, col = clr[2])]
+     trselscum[[2]][, polygon(x=c(age,rev(age)), y = c(conf1, rev(conf2)), col = adjustcolor(clr[2], 0.2), border = NA)]
+     
+    trselscum[[1]][1:NROW(trsel), lines(age, mretq, type = 'l', lwd = 1, col = clr[1])]
+     trselscum[[1]][, polygon(x=c(age,rev(age)), y = c(conf1, rev(conf2)), col = adjustcolor(clr[1], 0.2), border = NA)]
+     legend('left', lty = 1, col = clr, 
+         legend=c('2.0', 3.5, '5.0') %>% paste0('At least', ., 'years'), title = 'Tading age at exit', bty = 'n')  
+    trreturnquantile =  recordPlot()
+    
+    
+trselscum[[6]][1:NROW(trsel), plot(age, medretqwt, type = 'l', bty = 'l', xlab = 'Trading age (days)', ylab = 'Average annualized relative log return since entry'
+                                  , ylim = c(0.44, 0.51)
+                                  , lwd = 1, col = clr[3])]
+  trselscum[[5]][1:NROW(trsel), lines(age, medretqwt, type = 'l', lwd = 1, col = clr[2])]
+  trselscum[[4]][1:NROW(trsel), lines(age, medretqwt, type = 'l', lwd = 1, col = clr[1])]
+  trselscum[[3]][1:NROW(trsel), lines(age, medretqwt, type = 'l', lwd = 1)]
+  trselscum[[2]][1:NROW(trsel), lines(age, medretqwt, type = 'l', lwd = 1)]
+  trselscum[[1]][1:NROW(trsel), lines(age, medretqwt, type = 'l', lwd = 1)]
+ 
+  trselscum[[4]][1:NROW(trsel), plot(age, mretqwt, type = 'l', bty = 'l', xlab = 'Trading age (days)', ylab = 'Average annualized relative log return since entry'
+                                    # , ylim = c(0.44, 0.497)
+                                    , lwd = 1, col = clr[3])]
+    trselscum[[3]][1:NROW(trsel), lines(age, mretqwt, type = 'l', lwd = 1, col = clr[2])]
+    trselscum[[2]][1:NROW(trsel), lines(age, mretqwt, type = 'l', lwd = 1, col = clr[1])]
+    trselscum[[1]][1:NROW(trsel), lines(age, mretqwt, type = 'l', lwd = 1)]
+  legend('bottom', lty = 1, col = clr,
+         legend=c(5, 6, 7) %>% paste0('Over ', ., '-year experience'), title = 'Traders included', bty = 'n')
+  
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+
+  
+trreturnquantilewt =  recordPlot()
+  
+```
+
+
+```{r MassTroughtime, eval=T}
+load('regtable.rda')
+
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       , cl_transferout
+                       ))
+  ), list(
+    firstobs = firstobs,
+    closing_date = closing_date,
+    lastobs = lastobs
+  )]
+
+  
+popweight = regtable[, list(wt = 1/(.N)), by = firstobs][order(firstobs)]
+pops = merge(regtable, popweight)
+
+masstable = merge(pops[, list(ent = .N, entwt = sum(wt)), by = firstobs], 
+                pops[, list(exit = .N, exitwt = sum(wt)), by = closing_date], 
+                by.x = 'firstobs', by.y = 'closing_date', all = T
+            )[is.finite(firstobs)][order(firstobs)] %>% 
+  merge(data.frame(firstobs = seq.Date(min(regtable$firstobs), max(regtable$lastobs), 1)), 
+        all = T)
+masstable[is.na(masstable)] = 0
+
+masstable[, ':='(
+  no_traders = cumsum(ent-exit),
+  no_traderswt = cumsum(entwt-exitwt)
+  )]
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+masstable[ ,plot(firstobs, no_traders, type = 'l', 
+     xlab = 'Calendar time', ylab = 'Trading mass (Number of traders)', bty = 'l',
+     xaxs = 'i', yaxs = 'i',
+     ylim = c(0, tail(no_traders, 1)))]
+
+no_traders = recordPlot()
+plot.new()
+
+masstable[plot(firstobs, no_traderswt, type = 'l', 
+     xlab = 'Calendar time', ylab = 'Trading mass (Norm. number of traders)', bty = 'l',
+     xaxs = 'i', yaxs = 'i',
+     ylim = c(0, tail(no_traderswt, 1)))]
+
+no_traderswt = recordPlot()
+plot.new()
+
+
+masstable[plot(firstobs, 
+               rollmean(exitwt, 365, na.rm = T, na.pad = T, align = 'left'),
+     xlab = 'Calendar time', ylab = 'Trading mass (Norm. number of traders)', bty = 'l',
+     xaxs = 'i', yaxs = 'i', type = 'l')]
+
+
+
+# 
+# save(rouentry, no_traders, no_traderswt, file = 'rouentry.rda')
+# save(masstbl, file = 'masstbl.rda')
+
+# save(pops, file = 'pops.rda')
+
+
+# we have to normalize to entry rate, because in the model the entry rate is constant and in data not!
+regtable$firstobs %>% table %>% plot(tick = F, ylab = 'No. new accounts')
+axis(side = 2, labels = F)
+
+rouentry = recordPlot()
+plot.new()
+
+masstbl = data.table(date_trans = seq.Date(min(regtable$firstobs, na.rm = T), max(regtable$lastobs, na.rm = T), 15))
+
+masstbl[, ':='(no_traders =  NA, no_traderswt = NA)]
+
+
+# xx[order(closing_date)][, fr := rollsum(N,550, na.pad = T, na.rm = T)/rollmean(no_traders,550, na.pad = T, na.rm = T)][, plot(closing_date, fr)]
+
+for (i in 1:NROW(masstbl)){
+  # pick a date
+datesel = masstbl[i, date_trans]
+ temp = pops[
+  (is.na(closing_date) | closing_date >= datesel) & datesel >= firstobs
+  ]
+masstbl$no_traderswt[i] = temp$wt %>% sum
+masstbl$no_traders[i] = temp %>% NROW
+}
+
+
+
+
+
+# xx = merge(regtable[, .N, by = closing_date][order(closing_date)],masstblfull ,
+#            by.x = 'closing_date', by.y = 'date_trans', all.y = T)
+# 
+# 
+# clientdaily[, plot(account_date, raprofit365, type = 'l', axes = F, ann=F
+#                  , xlim=c('2009-06-01', '2017-07-01') %>% as.Date, col = 'red')]
+# axis(4, col = 'red')
+# par(new=T)
+# xx[, plot(closing_date, 
+#           rollsum(N, 365, na.rm = T, na.pad = T, align = 'left')/rollmean(ttln, 365, na.rm = T, na.pad = T, align = 'left'), col = 'black', type = 'l', ylab = '', ann=F, xlim=c('2009-06-01', '2017-07-01') %>% as.Date)]
+# 
+# legend('bottomright', lty = 1, legend = c('Exit rate over the next year', 'Avg excess log retrun SQ-wide \nover the previous year'), col = c('black', 'red'), bty = 'n')
+
+```
+
+```{r massdistbyage, eval=T}
+load('regtable.rda')
+
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       ))
+  )]
+
+ncnt = 800
+
+avgcnts = list()
+
+datesel = '2018-12-31' %>% as.Date
+
+popus = regtable[, list(
+  client = client,
+  firstobs = firstobs,
+  lastobs = lastobs,
+  closing_date = closing_date,
+  trage = datesel - firstobs
+)]
+
+popu = popus[trage >= 0 & (is.na(closing_date) | closing_date >= datesel)]
+
+popu[, exit := (!is.na(closing_date)) & closing_date <= datesel + tw]
+
+avgcnt = merge(popus[, list(ttlcnt = .N), by = trage], # ttlcnt - number of total entry for traders with that age, or calendar time
+               popu[, list(cnt = .N, exitcnt = sum(exit)), by = trage], 
+               # cnt - number of traders reamining on that day for that age
+               all.y = T)[order(trage)][, pp := cnt/ttlcnt]
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+clr = c('cadetblue4', 'orange', 'darkolivegreen2')
+k = 550
+temp = avgcnt[, list(n = sum(pp)), by = trage][order(trage), 
+               list(trage, n = rollsum(n, k, na.pad = T)/k)]
+                    
+temp$n[1] = 1
+
+temp$n[1:k] = temp[, approx(trage, n, xout = trage)$y]
+
+temp[, plot(trage, n, bty = 'l', type ='l', 
+                    xlab = 'Trading age (days)', ylab = 'Trading mass',
+                    xlim = c(0, 5500), ylim = c(0,1), xaxs = 'i', yaxs = 'i')]
+
+massbyage = recordPlot()
+
+save(massbyage, file = 'massbyage.rda')
+```
+
+```{r massdist, eval=T}
+load('regtable.rda')
+
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin
+                       ))
+  )]
+
+ncnt = 800
+
+avgcnts = list()
+
+tw = 180 # do they exit within the next tw days?
+
+for (i in 1:length(pickdates)){
+  # pick a date
+datesel = pickdates[i]
+
+popus = regtable[, list(
+  client = client,
+  firstobs = firstobs,
+  lastobs = lastobs,
+  closing_date = closing_date,
+  trage = datesel - firstobs
+)]
+
+popu = popus[trage >= 0 & (is.na(closing_date) | closing_date >= datesel)]
+
+popu[, exit := (!is.na(closing_date)) & closing_date <= datesel + tw]
+
+avgcnt = merge(popus[, list(ttlcnt = .N), by = trage], # ttlcnt - number of total entry for traders with that age, or calendar time
+               popu[, list(cnt = .N, exitcnt = sum(exit)), by = trage], 
+               # cnt - number of traders reamining on that day for that age
+               all.y = T)[order(trage)][, pp := cnt/ttlcnt]
+
+avgcnts[[i]] = avgcnt
+}
+
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+clr = c('cadetblue4', 'orange', 'darkolivegreen2')
+avgcnts[[1]][, trage %>% as.numeric %>% 
+               density(cut = -12000/as.numeric(max(trage)), weights = (pp)/sum(pp)) %>% 
+               plot(ylim = c(0.00015, 0.00027), xlim = c(0, 5000), bty = 'l', 
+                    xlab = 'Trading age (days)', ylab = 'Density', main = '', col = clr[1])]
+avgcnts[[2]][, trage %>% as.numeric %>% 
+               density(cut = -12000/as.numeric(max(trage)), weights = (pp)/sum(pp)) %>% 
+               lines(col = clr[2])]
+avgcnts[[3]][, trage %>% as.numeric %>% 
+               density(cut = -12000/as.numeric(max(trage)), weights = (pp)/sum(pp)) %>% 
+               lines(col = clr[3])]
+
+legend('bottomleft', legend = pickdates, lty = 1, col = clr,
+       title = 'Calendar time', bty = 'n', xpd = T)
+
+massdistwt = recordPlot()
+
+
+avgcnts[[1]][, trage %>% as.numeric %>% density(cut = 0, weights = (cnt)/sum(cnt), n = (trage %>% range %>% diff %>% as.numeric)+1)] -> xx1
+
+avgcnts[[2]][, trage %>% as.numeric %>% density(cut = 0, weights = (cnt)/sum(cnt), n = (trage %>% range %>% diff %>% as.numeric)+1)] -> xx2
+
+avgcnts[[3]][, trage %>% as.numeric %>% density(cut = 0, weights = (cnt)/sum(cnt), n = (trage %>% range %>% diff %>% as.numeric)+1)] -> xx3
+
+xx1 %>% plot(ylim = c(0, 0.0005), xlim = c(0, 5000), bty = 'l', 
+                    xlab = 'Trading age (days)', ylab = 'Density', main = '')
+xx2 %>% lines(col = 'red')
+xx3 %>% lines(col = 'blue')
+
+
+legend('topright', legend = pickdates, lty = 1, col = c('black', 'red', 'blue'),
+       title = 'Calendar time', bty = 'n')
+
+massdist = recordPlot()
+
+
+
+# mass of exit traders
+par(mgp=c(1.5,0.5,0), xpd = F)
+k = 365
+clr = c('black', 'gray35', 'gray70')
+avgcnts[[1]][, agediff := c(0,diff(trage))][, plot(trage, rollsum(exitcnt/ttlcnt, k, na.pad = T)/rollsum(agediff, k, na.pad = T), bty = 'l', type ='l', 
+                    xlab = 'Trading age (days)', ylab = 'Exiting mass',
+                    xlim = c(0, 4900),ylim = c(0, 0.017), xaxs = 'i', yaxs = 'i')]
+avgcnts[[2]][, agediff := c(0,diff(trage))][, lines(trage, rollsum(exitcnt/ttlcnt, k, na.pad = T)/rollsum(agediff, k, na.pad = T), col = clr[2])]
+avgcnts[[3]][, agediff := c(0,diff(trage))][, lines(trage, rollsum(exitcnt/ttlcnt, k, na.pad = T)/rollsum(agediff, k, na.pad = T), col = clr[3])]
+legend('bottom', legend = pickdates, lty = 1, col = clr,
+       title = 'Calendar time', bty = 'n', xpd = T)
+
+massexitdist = recordPlot()
+
+# exit likelihood by age
+avgcnts[[1]][, trage %>% as.numeric %>% density(cut = 0, weights = (exitcnt)/sum(exitcnt), n = (trage %>% range %>% diff %>% as.numeric) +1)] -> xxe1
+avgcnts[[2]][, trage %>% as.numeric %>% density(cut = 0, weights = (exitcnt)/sum(exitcnt), n = (trage %>% range %>% diff %>% as.numeric) +1)] -> xxe2
+avgcnts[[3]][, trage %>% as.numeric %>% density(cut = 0, weights = (exitcnt)/sum(exitcnt), n = (trage %>% range %>% diff %>% as.numeric) +1)] -> xxe3
+
+
+
+plot(xx1$x, xxe1$y/xx1$y*sum(avgcnts[[1]]$exitcnt)/sum(avgcnts[[1]]$cnt),
+     type = 'l', xlab = 'Trading age (days)', ylab = 'Exit likelihood',
+     xlim = c(0, 5200), ylim = c(0,0.033), xaxs = 'i', yaxs = 'i', bty = 'l', col = clr[1])
+lines(xx2$x, xxe2$y/xx2$y*sum(avgcnts[[2]]$exitcnt)/sum(avgcnts[[2]]$cnt), col = clr[2])
+lines(xx3$x, xxe3$y/xx3$y*sum(avgcnts[[3]]$exitcnt)/sum(avgcnts[[3]]$cnt), col = clr[3])
+legend('bottom', legend = pickdates, lty = 1, col = clr,
+       title = 'Calendar time', bty = 'n', xpd = T)
+
+exitlikelidist = recordPlot()
+
+save(massdist, massdistwt, massexitdist, exitlikelidist, file = 'massdist.rda')
+```
+
+```{r exitlikeligivenT, eval=T}
+# load('regtable.rda')
+# regtable = regtable[!(
+#   client %in% unique(c(cl_transferin, cl_transferout))
+#   )]
+
+load('pops.rda')
+nAgeGroups = 8
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+
+tw = 180
+
+exitliks = list()
+
+exitlikswt = list()
+
+for (i in 1:length(pickdates)){
+  # pick a date
+datesel = pickdates[i]
+
+popu = pops[, trage := datesel - firstobs][trage >= 0 & (is.na(closing_date) | closing_date >= datesel)]
+
+
+# exit within the selected time window tw?
+popu[, exit := (!is.na(closing_date)) & closing_date <= datesel + tw]
+
+popu[, agerank := frank(trage)]
+
+popu[, agegroup := ceiling(agerank/(.N) * nAgeGroups)]
+
+
+temp = popu[, list(exits = sum(exit*wt), tots = sum(wt)), by = trage][order(trage)]
+exitmasswt =  temp[, list(
+  age = rollmean(trage, 1500),
+  exitm = rollsum(exits, 1500),
+  totsm = rollsum(tots, 1500)
+)]
+
+exitmasswt[, plot(age, exitm, type = 'l')]
+
+
+temp = popu[, list(exits = sum(exit), tots = .N), by = trage][order(trage)]
+exitmass =  temp[, list(
+  age = rollmean(trage, 1500),
+  exitm = rollsum(exits, 1500),
+  totsm = rollsum(tots, 1500)
+)]
+
+exitmass[, plot(age, exitm/totsm, type = 'l', ylim = c(0, 0.023))]
+
+exitliks[[i]] = popu[, list(exits = sum(exit),
+                            tots = .N), by = agegroup][order(agegroup)]
+exitliks[[i]][, exitlik := exits/tots]
+exitliks[[i]]$ageupper = quantile(popu$trage, (0:nAgeGroups)/nAgeGroups) %>% rollmean(2)
+
+
+exitlikswt[[i]] = popu[, list(exits = sum(exit*wt),
+                            tots = sum(wt)), by = agegroup][order(agegroup)]
+exitlikswt[[i]][, exitlik := exits/tots]
+exitlikswt[[i]]$ageupper = quantile(popu$trage, (1:nAgeGroups)/nAgeGroups)
+}
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+
+
+
+allr = lapply(exitlikswt, FUN = function(x) x$exitlik) %>% unlist
+exitlikswt[[1]][, plot(ageupper, exitlik, type = 'l'
+          , xlim = c(0,6000), ylim = range(allr)
+          , xlab = 'Trading age $t$', 
+          ylab = paste0('Exit likelihood')
+          , bty = 'l'
+          )]
+exitlikswt[[2]][, lines(ageupper, exitlik, col = 'red')]
+exitlikswt[[3]][, lines(ageupper, exitlik, col = 'blue')]
+
+
+allr = lapply(exitliks, FUN = function(x) x$exitlik) %>% unlist
+exitliks[[1]][, plot(ageupper, exitlik, type = 'l'
+          , xlim = c(0,6000), ylim = range(allr)
+          , xlab = 'Trading age $t$', 
+          ylab = paste0('Exit likelihood')
+          , bty = 'l'
+          )]
+exitliks[[2]][, lines(ageupper, exitlik, col = 'red')]
+exitliks[[3]][, lines(ageupper, exitlik, col = 'blue')]
+legend('topleft', legend = pickdates, lty = 1, col = c('black', 'red', 'blue'),
+       title = 'Calendar time $T$', bty = 'n')
+```
+
+```{r exitgivenRT, eval=F}
+# procrastination
+
+if(!(exists('clientdaily2')|exists('clientdaily'))){
+  load('clientdaily.rda')}
+
+clr = c('deepskyblue4', 'orange2', 'green4')
+
+rn = 3
+par(mgp=c(1.5,0.5,0), xpd = F)
+
+nAgeGroups = 6
+
+pltexitgivenT = list()
+for (i in 1:length(pickdates)){
+  # pick a date
+datesel = pickdates[i]
+
+gc()
+subsample = clientdaily[account_date > datesel-90 & account_date < datesel+90, list(
+  client = client,
+  account_date = account_date,
+  firstobs = firstobs,
+  lastobs = lastobs,
+  closing_date = closing_date,
+  trage = datesel - firstobs,
+  raprofit = raprofit365
+)][trage >= 365 & (is.na(closing_date) | closing_date >= datesel)]
+gc()
+
+returntplot = subsample[, list(
+  closing_date = closing_date,
+  trage = trage,
+  raprofit = raprofit[which.min(abs(account_date-datesel))],
+  account_date = account_date[which.min(abs(account_date-datesel))]), by = client]
+
+# exit within the selected time window tw?
+returntplot[, exit := (!is.na(closing_date)) & closing_date <= datesel + tw]
+
+returntplot[, agegroup := ceiling(frank(trage)/(.N) * nAgeGroups)]
+returntplot[, rgroup := ceiling(frank(raprofit)/(.N) * rn)]
+
+# count exit number and total number in each age-return cohort
+temp = returntplot[, list(
+  cnt = .N
+), by = c('agegroup', 'rgroup', 'exit')][order(agegroup, rgroup)] %>% 
+  spread(exit, cnt)
+names(temp)[3:4] = c('remain','exit')
+temp[, ttlcnt := remain + exit][, exitlikli := exit/ttlcnt]
+
+as = returntplot[, list(as = median(trage, na.rm = T)), by = agegroup]$as %>% sort
+
+yrg = range(temp$exitlikli)
+
+temp[rgroup == 1, plot(as[agegroup], exitlikli, 
+          type='l', 
+          # xlim =c(-0.74, 0.2),
+          ylim = yrg,
+          ylab = 'Exit likelihood', xlab = 'Trading age (days)', yaxs='i', bty = 'l', col = clr[1])
+     ]
+
+temp[rgroup == 2, lines(as[agegroup], exitlikli, col = clr[2])]
+
+temp[rgroup == 3, lines(as[agegroup], exitlikli, col = clr[3])]
+
+legend('topright', legend = c('Lowest tertile', 'Middle tertile','Highest tertile'), lty = 1, col = clr,
+       title = 'One-year trading return', bty = 'n', xpd = T)
+
+assign(paste0('pltexitgivenRT',i), recordPlot())
+plot.new()
+
+mtext(datesel,side=1, line = 4, cex = 1)
+}
+
+save(pltexitgivenRT1, pltexitgivenRT2, pltexitgivenRT3, file = 'pltexitgivenRT.rda')
+```
+
+```{r exitgivenR, eval=F}
+load('regtable.rda')
+regtable = regtable[!(
+  client %in% unique(c(cl_transferin, cl_transferout))
+  )]
+
+# load('pops.rda')
+nAgeGroups = 8
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+
+tw = 180
+
+exitliks = list()
+
+exitlikswt = list()
+
+for (i in 1:length(pickdates)){
+  # pick a date
+  
+  datesel = pickdates[i]
+  
+  popu = regtable[, trage := datesel - firstobs][trage >= 0 & (is.na(closing_date) | closing_date >= datesel)]
+  
+  popu[, exit := (!is.na(closing_date)) & closing_date <= datesel + tw]
+  
+  gc()
+  subsample = clientdaily[account_date > datesel-90 & account_date < datesel+90][client %in% popu$client]
+  gc()
+  
+  subsample = subsample[, list(
+  raprofit365 = raprofit365[which.min(abs(account_date-datesel))],
+  account_date = account_date[which.min(abs(account_date-datesel))]), by = client]
+  
+  returntplot = merge(popu, na.omit(subsample))
+  
+  returntplot[, agegroup := ceiling(frank(trage)/(.N) * nAgeGroups)]
+  
+  returntplot[, rgroup := ceiling(frank(raprofit365)/(.N) * rn)]
+
+
+# exit within the selected time window tw?
+popu[, exit := (!is.na(closing_date)) & closing_date <= datesel + tw]
+
+popu[, agerank := frank(trage)]
+
+popu[, agegroup := ceiling(agerank/(.N) * nAgeGroups)]
+
+
+# temp = popu[, list(exits = sum(exit*wt), tots = sum(wt)), by = trage][order(trage)]
+# exitmass =  temp[, list(
+#   age = rollmean(trage, 1500),
+#   exitm = rollsum(exits, 1500),
+#   totsm = rollsum(tots, 1500)
+# )]
+# 
+# exitmass[, plot(age, exitm, type = 'l')]
+
+
+exitliks[[i]] = popu[, list(exits = sum(exit),
+                            tots = .N), by = agegroup][order(agegroup)]
+exitliks[[i]][, exitlik := exits/tots]
+exitliks[[i]]$ageupper = quantile(popu$trage, (0:nAgeGroups)/nAgeGroups) %>% rollmean(2)
+
+
+# exitlikswt[[i]] = popu[, list(exits = sum(exit*wt),
+#                             tots = sum(wt)), by = agegroup][order(agegroup)]
+# exitlikswt[[i]][, exitlik := exits/tots]
+# exitlikswt[[i]]$ageupper = quantile(popu$trage, (1:nAgeGroups)/nAgeGroups)
+}
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+
+
+
+allr = lapply(exitlikswt, FUN = function(x) x$exitlik) %>% unlist
+
+
+
+
+allr = lapply(exitliks, FUN = function(x) x$exitlik) %>% unlist
+exitliks[[1]][, plot(ageupper, exitlik, type = 'l'
+          , xlim = c(0,6000), ylim = range(allr)
+          , xlab = 'Trading age $t$', 
+          ylab = paste0('Exit likelihood')
+          , bty = 'l'
+          )]
+exitliks[[2]][, lines(ageupper, exitlik, col = 'red')]
+exitliks[[3]][, lines(ageupper, exitlik, col = 'blue')]
+legend('topleft', legend = pickdates, lty = 1, col = c('black', 'red', 'blue'),
+       title = 'Calendar time', bty = 'n')
+
+#exit likelhood does look like model! :D
+```
+
+```{r avgreturn, eval=F}
+load('regtable.rda')
+rm(cl_retail, Closed_account, u.trans)
+gc()
+if(!(exists('clientdaily2')|exists('clientdaily'))){
+  load('clientdaily.rda')
+}
+
+
+
+
+nAgeGroups = 25
+
+avgreturns = list()
+
+popweight = regtable[, list(wt = 1/(.N)), by = firstobs]
+
+nroll = 365
+# for (nroll in nrolls){
+  # pick a return measurement
+  pickr = paste0('raprofit', nroll) # 'meanappret'
+
+# pickdates = '2018-12-31' %>% as.Date
+for (i in 1:length(pickdates)){
+  # pick a date
+datesel = pickdates[i]
+
+popu = regtable[datesel >= firstobs , list(
+  client = client,
+  firstobs = firstobs,
+  lastobs = lastobs,
+  closing_date = closing_date
+)][is.na(closing_date) | closing_date >= datesel]
+
+subsample = clientdaily[account_date > datesel-90 & account_date < datesel+90& is.finite(get(pickr))][client %in% popu$client]
+
+subsample = subsample[, list(
+  raprofit = get(pickr)[which.min(abs(account_date-datesel))],
+  account_date = account_date[which.min(abs(account_date-datesel))]), by = client]
+
+returntplot = merge(popu, na.omit(subsample)) %>% merge(popweight, by = 'firstobs')
+
+returntplot[, trage := account_date - firstobs]
+# avgreturns[[i]] = returntplot[, list(
+#   meanr = mean(raprofit, na.rm = T)
+# ), by = trage][order(trage)]
+
+# avgreturns[[i]] = returntplot[, list(
+#   meanr = weighted.mean(raprofit, wt)
+# ), by = trage][order(trage)]
+
+returntplot[trage > 365.2425*0, agegroup := ceiling(trage/365.2425*2)]
+
+avgreturns[[i]] = returntplot[is.finite(agegroup), list(
+ meanr = weighted.mean(raprofit, wt),
+ trage = weighted.mean(trage, wt)
+), by = agegroup][order(agegroup)]
+
+}
+
+
+  clr = c('black', 'gray35', 'gray70')
+
+par(mgp=c(1.5,0.5,0), xpd = F)
+# allr = lapply(avgreturns, FUN = function(x) x$meanr) %>% unlist
+avgreturns[[1]][, plot( trage, meanr - mean(meanr), type = 'l'
+          , xlim = c(0,6000), ylim = c(-.15, .04)
+          , xlab = 'Trading age (days)'
+          , ylab = 'Demeaned 365-day excess log return'
+          , bty = 'l', col = clr[1])]
+avgreturns[[2]][, lines( trage, meanr - mean(meanr), col = clr[2])]
+avgreturns[[3]][, lines( trage, meanr - mean(meanr), col = clr[3])]
+legend('bottom', legend = pickdates, lty = 1, col = clr,
+       title = 'Calendar time', bty = 'n', xpd = T)
+
+
+assign(paste0('avgreturn',nroll), recordPlot())
+save(avgreturn365, file = 'avgreturn365.rda')
+# plot.new()
+# }
+
+
+# save(avgreturn183, avgreturn365, avgreturn548, file = 'avgreturn.rda')
+
+```

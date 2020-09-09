@@ -1,0 +1,1325 @@
+---
+title: "Learning (not) to Trade"
+author: "Java"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r echo = F, results="hide", warning=F, message=F}
+# save.image(file = '/data/JavaXu/image.rda')
+# load(file = '/data/JavaXu/image.rda')
+# install.packages('plm')
+# install.packages('pglm')
+# install.packages('Rchoice')
+
+
+library(data.table)
+library(tidyr)
+library(lubridate)
+library(lattice)
+library(openintro)
+library(zoo)
+library(pracma)
+library(nloptr)
+library(speedglm)
+library(timeDate)
+# library(riskRegression)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(magrittr)
+# library(doMC)
+library(survival)
+library(plm)
+library(pglm)
+library(Rchoice)
+librar
+
+knitr::opts_chunk$set(echo = F, cache = F, eval = F, include = F, message=F)
+
+options(stringsAsFactors = F,
+        datatable.WhenJisSymbolThenCallingScope = T)
+
+get_data= function(str){
+  return(get(load(str)))
+}
+```
+
+```{r}
+u.trans=get_data('/data/NKdata/PERSONAS/data/Trading/utrans_2001_2018.rda')
+
+max_date=as.Date("2019-01-01")
+min_date=as.Date("2011-01-01")
+gc()
+#u.trans=u.trans[!duplicated(u.trans[,c('trade_id','client','date_trans','isin')])]#%>%.[asset_type %in% c(30, 31, 32)]
+u.trans = u.trans[order(date_trans)] %>% .[date_trans<max_date] 
+u.trans$action %<>% as.character
+u.trans$cur %<>% as.character
+u.trans$symbol %<>% as.character
+u.trans$isin %<>% as.character
+
+cl_shares=unique(u.trans$client)
+
+# > u.trans %>% names
+# [1] "trade_id"           "client"             "date_trans"         "isin"               "symbol"             "asset_type"         "stock_exchange"
+# [8] "action"             "cur"                "security_key"       "qty_trans"          "mean_unit_price"    "mean_rate_chf"      "vol_chf_trans"
+# [15] "vol_cur_trans"      "contractsize_trans" "group_order"
+
+###### Identify sec_id - security_key 
+sty = read.csv("/data/NKdata/PERSONAS/data/securities.txt", sep = ";", header = T) %>%
+  setNames(c("sec_id", "name","sec_type","sec_group", "asset_type", "symbol","isin","stock_exchange",
+             "cur","strike","maturity","contractsize","call_put","cotation_type", "cotation_factor",
+             "underlying","underlying_id","top")
+  ) %>% 
+  as.data.table  %>% .[,isin:=substr(isin,1,12)] %>%
+  .[,security_key := paste0(isin, "_", stock_exchange, "_", cur)]
+
+### insiders
+insiders = read.csv('/data/NKdata/PERSONAS/data/insiders_accounts.txt', sep = ";", header = T) %>% 
+  setNames(c("client", "attr_id", "attr_val")) %>%
+  as.data.table 
+
+### personas info
+persID = read.csv('/data/NKdata/PERSONAS/data/persons_accounts.txt', sep = ";", header = T) %>%
+  setNames(c("account_id", "person_id", "title_lable", "birth_year", "language", "numbered", "company_flag")) %>% 
+  as.data.table # we do not use person_id in the end because some people use different trading strategies for different account anyway.
+
+### type of accounts
+acc_types = read.csv('/data/NKdata/PERSONAS/data/accounts_types.txt', sep = ";", header = T) %>% 
+  setNames(c("client", "attr_id", "attr_val")) %>% 
+  as.data.table
+
+### Retail and large private accounts, trading accounts, and swissquote label
+Tab4ext = read.csv('/data/NKdata/PERSONAS/data/Tab4_extended.txt', sep = ";", header = T) %>% 
+  setNames( c("account_id", "client",  "mark_camp", "age", "country_res", 
+                                "client_segm", "brand_id","brand_lab", "acc_type_id", "acc_type",  
+                                "status",  "status_val", "acc_status_date"))
+
+source("~/workspace/R/OWM_research/OWMfga/R-ex/OWMresearch.R")
+SMI=OWMbdh(ticker =  "SMI Index", field = "PX_LAST", start.date = "2007-01-01" %>% as.Date,  end.date = '2019-05-01')%>%.[!is.na(.)]
+SP=OWMbdh(ticker =  "SPX Index", field = "PX_LAST", start.date = min_date,  end.date = max_date)%>%.[!is.na(.)]
+
+# save(SMI, file= 'SMI.rda')
+SMI_vol=OWMbdh(ticker =  "SMI Index", field = "PX_VOLUME", start.date = min_date,  end.date = max_date)%>%.[!is.na(.)]
+
+MSCI=OWMbdh(ticker =  "MXWO Index", field = "PX_LAST", start.date = min_date,  end.date = max_date)%>%.[!is.na(.)]
+
+MSCI_vol=OWMbdh(ticker =  "MXWO Index", field = "PX_VOLUME", start.date = min_date,  end.date = max_date)%>%.[!is.na(.)]
+
+# Port_data=c()
+
+# for (i in 2015:2018){
+# temp = get_data(paste0('/data/ClientDataStorage/portfolioData/rda_files/FactAccountPosition',i,'.rda'))
+# gc()
+# ts3 = temp[,':='(account_id=NULL,qty=NULL)] %>% merge(inscope, by = c('sec_id','client'))
+# gc()
+# Port_data=rbind(Port_data,ts3[,':='(sec_id=NULL)])
+# rm(ts3)
+# gc()
+# } #takes 30min+ to load
+
+# save(Port_data, file = '/data/JavaXu/Port_data.rda')
+```
+
+```{r}
+Tab4ext$acc_status_date %<>% as.Date
+Tab4ext %<>% as.data.table %>% setorder('client') %>% 
+  .[acc_status_date<max_date] %>% .[brand_lab=='Swissquote' & acc_type=='Trading'] %>%
+  .[client_segm %in% c("HNW accounts", "Retail account")] 
+
+last_close = Tab4ext[status_val == 'Closed',list(last_close=max(acc_status_date, na.rm = T)),by='client']
+last_open = Tab4ext[status_val == 'Open',list(last_open=max(acc_status_date, na.rm = T)),by='client']
+
+Closed_account = merge(last_close,last_open,all = T)
+Closed_account$closing_date = ifelse(Closed_account$last_open < Closed_account$last_close, Closed_account$last_close %>% as.character, NA) %>% as.Date
+
+### Clients: (retail accounts, large private accounts, Swissquote label, direct accounts, no insiders)
+cl_retail = unique(Tab4ext$client)  %>%  .[!(. %in% insiders$client)] %>% 
+  .[(. %in% acc_types$client[acc_types$attr_val=='Direct client'])]
+
+# account_id_retail = unique(Tab4ext$account_id[Tab4ext$client %in% cl_retail])
+
+###
+u.trans2=u.trans[client %in% cl_retail] %>% .[security_key %in% sty$security_key[(sty$asset_type %in% c(30:32))]] %>% 
+  .[action %in% c('B','S', 'D')]
+
+## number of securities traded
+nsec = u.trans2[date_trans > min_date, c('client','security_key')] %>% unique %>% .$client %>% table
+
+## number of trades
+ntrade = u.trans2[date_trans > min_date, 'client'] %>% table
+
+## average trade per client
+meanvol = u.trans2[date_trans>min_date,list(mean_chf_tr=mean(vol_chf_trans)),by='client']
+
+## last seen trade
+last_trade = u.trans2[,list(last_tr=max(date_trans, na.rm = T)),by='client']
+first_trade = u.trans2[,list(first_tr=min(date_trans, na.rm = T)),by='client']
+
+Tab4_lt = merge(first_trade,last_trade,all.x = T) %>% 
+  merge(Closed_account,all.x = T)
+
+# attention --- first trade "A", magnitude, big transfer means history with other banks
+# for age and gender 
+pers = merge(persID[,c("account_id","birth_year",'title_lable')],Tab4ext[,c("account_id","client")] %>% unique) %>% .[client %in% Tab4_lt$client]
+pers$gender = pers$title_lable != 'Mr'
+
+# If last trade occurred after the recorded closing date, then use last trade date as closing date
+Tab4_lt$check = Tab4_lt$closing_date < Tab4_lt$last_tr
+Tab4_lt$closing_date[which(Tab4_lt$check)] = Tab4_lt$last_tr[which(Tab4_lt$check)]
+
+
+temp = merge(nsec,ntrade, by='.') %>%
+  setNames(c('client','nsec','ntrade')) %>%
+  merge(meanvol)
+temp$client %<>% as.character %>% as.integer
+regtable = merge(pers, temp, by = 'client') %>% 
+  merge(Tab4_lt[,c('client','first_tr', 'last_tr','closing_date')], by = 'client')
+
+u.trans2[, yeartrans := format(date_trans,'%Y') %>% as.numeric]
+
+Date_seq=seq(from = min_date, to= max_date,  by = "year")[-1] #by year
+
+### Age matrix
+agematrix = matrix(NA,nrow=NROW(regtable$client),ncol=length(Date_seq), 
+                   dimnames = list(as.character(regtable$client), as.character(Date_seq))
+)
+
+### Volume matrix
+# volmatrix = agematrix
+
+# Date_seq=as.Date(timeLastDayInQuarter(seq(as.Date("2010-03-01"), by = "quarter", length.out = 36)))
+# Age=outer(Tab4_lt$first_tr, Date_seq, FUN=function(x,y) { # what if account closed before quarter/year end?...
+#   age=as.numeric(y-x)/365.2425 # age in years
+#   ifelse(age>0,age,NA)
+#   }) 
+# colnames(Age)=as.character(Date_seq)
+# rownames(Age)=as.character(Tab4_lt$client)
+```
+
+```{r addmarketdata}
+funcindex = function(inde){
+ind = inde %>% as.data.frame 
+ind$date = rownames(ind) %>% as.Date
+ind %<>% as.data.table
+names(ind)[1] = 'price'
+
+foo = ind[, .(date = min(date)), by = .(yeartrans = format(date, '%Y') %>% as.numeric)] %>% merge(ind)
+names(foo)[3] = 'yearopen'
+
+foo2 = ind[, .(date = max(date)), by = .(yeartrans=format(date, '%Y') %>% as.numeric)] %>% merge(ind)
+names(foo2)[3] = 'yearclose'
+
+indann = merge(foo[,-1], foo2[,-1])
+
+indann[,ret := yearclose/yearopen-1]
+
+return(indann)
+}
+
+smiannualreturn = funcindex(SMI)
+spannualreturn = funcindex(SP)
+
+# save(smiannualreturn, spannualreturn, SMI, SP, file = 'indexdata.rda')
+```
+
+```{r}
+u.trans3=u.trans2[date_trans > min_date, list(qty_trans=sum(qty_trans),vol_chf_trans=sum(vol_chf_trans),vol_cur_trans=sum(vol_cur_trans)),
+         by=c('client','date_trans','action','security_key','isin','symbol','asset_type','stock_exchange','cur')]
+
+first_sell=function(date1,action1){
+  options(warn = -1)
+  y=date1[action1=='S']
+  Mat=outer(date1,y,FUN=function(x,z){ifelse(z<x,Inf,z)})
+  ind=apply(Mat,1,FUN=function(x){min(x)})
+  return(as.Date(ind))
+}
+
+# setkey(u.trans_temp, "client") #used for .(x) later
+# registerDoMC(cores=15)
+# u.trans_match = foreach(x=unique(u.trans_temp[action == 'B',client]), .combine="rbind") %dopar%
+#            u.trans_temp[.(x), list(
+#              client, date_trans, action, isin, symbol, asset_type, stock_exchange, cur, qty_trans, vol_chf_trans, vol_cur_trans,
+#              sell_date = first_sell(date_trans,action)), by = security_key]
+# save(u.trans_match, file = '/data/JavaXu/u.trans_match.rda')
+
+load('/data/JavaXu/u.trans_match.rda')
+u.trans_match = u.trans_match[, `:=`(
+  price_cur = vol_cur_trans/qty_trans, price_chf = vol_chf_trans/qty_trans
+  )]
+
+#Price_data=get_data('/data/ExtractFile/ExtractPrice_4.rda')
+#Price_data$cur %<>% as.character
+# u.trans_match %<>% merge(Price_data, by.x = c('date_trans','isin','cur'), by.y = c('date','isin','cur'), all.x=T) 
+
+inscope = sty[,c('sec_id','security_key')] %>% unique %>%
+  merge(u.trans_match[,c('client','security_key')] %>% unique)
+
+load('/data/JavaXu/Port_data.rda')
+# Port_data[,price_curr:=NULL]
+u.trans_sell = u.trans_match[action == 'S', !'date_trans']
+
+u.trans_matched = u.trans_match[action == 'B'] %>% 
+  merge(u.trans_sell[,c('stock_exchange','action','asset_type','isin','cur','symbol') := NULL], suffixes = c(".buy",".sell"),
+        by =  c('security_key','client','sell_date'), all.x=T)
+
+
+bankdays = Port_data$date %>% unique # need to consider holiday and weekend
+
+MSCI = MSCI[(MSCI %>% index) %in% (MSCI_vol %>% index)] # essentially remove "2016-01-01" which only existed in MSCI but not MSCI_vol
+
+market_return = outer(MSCI,MSCI,function(x,y) x/y-1)
+dimnames(market_return) = MSCI %>% index %>% as.character %>% list(.,.)
+
+daterange = MSCI %>% index %>% .[3:(length(.)-2)] %>% range
+
+transadates = unique(u.trans_matched$date_trans)
+u.trans_matched$buydateind = sapply(transadates, function(x) which.min(abs(x - MSCI %>% index))) %>% 
+  .[match(u.trans_matched$date_trans, transadates)]
+
+# different look-back period for returns
+horiz = c(5,10,30,60)
+for (i in horiz){
+dates = unique(u.trans_matched$date_trans + i)
+
+foo = sapply(dates, function(x) bankdays[which.min(abs(x - bankdays))], simplify = F) %>%
+  do.call(c,.) %>% .[match(u.trans_matched$date_trans + i, dates)]
+
+# u.trans_matched[, paste0('date',i) := list(foo)]
+
+# u.trans_matched$date = foo
+
+u.trans_matched[[paste0('date',i)]] = pmin(foo,u.trans_matched$sell_date, na.rm = T)
+
+# u.trans_matched = u.trans_matched[, date:=pmin(paste0('date',i), sell_date, na.rm = T)]
+# u.trans_matched %<>%  all.x=T,
+
+foo = u.trans_matched[,c('client','security_key',paste0('date',i)), with=F]
+
+foo = merge(foo,Port_data,
+                           by.x = c(paste0('date',i),'client','security_key'), 
+                           by.y = c('date','client','security_key')) %>% unique  # takes several minutes
+
+names(foo)[4:5] = paste0(c('price_cur','price_chf'),i)
+
+u.trans_matched %<>% merge(foo, all.x = T, by = names(foo)[1:3])
+
+ind = is.finite(u.trans_matched$sell_date) & u.trans_matched$sell_date <= u.trans_matched[[paste0('date',i)]]
+u.trans_matched[[paste0('price_cur',i)]][ind] = u.trans_matched$price_cur.sell[ind]
+
+u.trans_matched[[paste0('wt',i)]] = u.trans_matched$vol_chf_trans.buy
+u.trans_matched[[paste0('wt',i)]][ind] = u.trans_matched[,pmin(vol_chf_trans.buy,vol_chf_trans.sell, na.rm = T)][ind]
+
+# u.trans_matched[, price_cur.end := ifelse(is.finite(sell_date) & sell_date == date, price_cur.sell, price_curr)]
+# 
+# u.trans_matched %<>% .[is.finite(price_cur.end),]
+
+u.trans_matched[[paste0('return',i)]] = u.trans_matched[[paste0('price_cur',i)]]/u.trans_matched$price_cur.buy -1
+
+# u.trans_matched %<>% .[pmin(date,date_trans) >= daterange[1] & pmax(date,date_trans) <= daterange[2],]
+
+transadates = unique(u.trans_matched[[paste0('date',i)]])
+u.trans_matched$enddateind = sapply(
+  transadates, function(x) which.min(abs(x - MSCI %>% index))
+  )[match(u.trans_matched[[paste0('date',i)]], transadates)]
+
+# (3:(length(MSCI)-2)) %>% outer(.,., function(x,y) market_return[x+(-2:2), y+(-2:2)] %>% diag %>% mean(na.rm=T))
+indmax = market_return %>% NROW
+temp = u.trans_matched[,c('buydateind','enddateind')] %>% unique
+temp[, paste0(c('mktreturn','mktsqreturn','mktvol'),i) := list(
+  market_return[
+  pmin(pmax(enddateind+(-2:2),0),indmax),pmin(pmax(buydateind+(-2:2),0),indmax)
+                           ] %>% diag %>% mean(na.rm=T),  # market return
+  (market_return[
+      pmin(pmax(enddateind+(-2:2),0),indmax),pmin(pmax(buydateind+(-2:2),0),indmax)
+         ] %>% diag)^2 %>% mean(na.rm=T), # market return squared
+    (MSCI_vol[
+      pmin(pmax(enddateind+(-2:2),0),indmax) # market volatility
+      ] %>% mean(na.rm=T)) / 1e9 # scale down
+  ),
+     by = rownames(temp)]
+  
+u.trans_matched %<>% merge(temp, by = c('buydateind','enddateind'))
+}
+
+u.trans_matched[,yeartrans := format(date_trans,'%Y')][, clyear := paste(client,yeartrans)]
+save(u.trans_matched, file='u.trans_matched.rda')
+```
+
+```{r, eval=F}
+# 1.2 Measuring the disposition effect, Eq. (1), TO BE UPDATED
+load('u.trans_matched.rda')
+
+u.trans_matched[, dateajd := pmax(date, date_trans+0.5)]
+
+survtable = u.trans_matched[is.finite(price_chf.sell),.N,by=clyear][N>=7, .(clyear)] # p.710 table note, 7 rounds
+# survtable[,dateajd := max(date, date_trans+0.5)]
+
+# distable[, ':='(bd = NA, br = NA, bs = NA, bv = NA)]
+
+parfor_fun=function(){
+  setkey(u.trans_matched, "clyear")
+  registerDoMC(cores=15)
+  
+  distable=foreach(x=survtable$clyear, .combine="rbind") %dopar% {
+    options(warn=-1)
+      tryCatch({temp = coxph(Surv(time = date_trans %>% as.numeric , time2 = dateajd %>% as.numeric, event =
+        as.numeric(is.finite(sell_date) & sell_date == date)) ~
+        I(return>0) + mktreturn + mktsqreturn + mktvol, data = u.trans_matched[.(x),])?Surv
+      
+      c(x,temp$coefficients)}, error=function(e){NA})
+  }
+  return(distable)    
+}
+out=parfor_fun()
+
+# save(out, file = 'dispoout.rda')
+options(warn=0)
+
+# setkey(u.trans_temp, "client") #used for .(x) later
+# registerDoMC(cores=15)
+# u.trans_match = foreach(x=unique(u.trans_temp[action == 'B',client]), .combine="rbind") %dopar%
+#            u.trans_temp[.(x), list(
+#              client, date_trans, action, isin, symbol, asset_type, stock_exchange, cur, qty_trans, vol_chf_trans, vol_cur_trans,
+#              sell_date = first_sell(date_trans,action)), by = security_key]
+# save(u.trans_match, file = '/data/JavaXu/u.trans_match.rda')
+
+distable %<>% as.data.frame()
+for (i in 1:NROW(distable)){
+u.trans_coxreg = u.trans_matched[clyear %in% filter[i]]
+try({temp = coxph(Surv(time = date_trans %>% as.numeric , time2 = date %>% as.numeric, event =
+  as.numeric(is.finite(sell_date) & sell_date == date)) ~
+        I(return>0) + mktreturn + mktsqreturn + mktvol, data = u.trans_coxreg)
+distable[i,2:5]=temp$coefficients
+},  silent = T)
+# print(i)
+}
+
+```
+
+```{r crossec, eval = F}
+# 3.2 Simple learning model, Eq. (2)
+# build investor-year linear regression table
+load('u.trans_matched.rda')
+
+inscope = u.trans_matched$client %>% unique
+
+acctval=c()
+
+# load('/data/ClientDataStorage/clientsData/rda_files/Tab2after2010.rda')
+# retrieving account value
+# for (i in 2009:2018){
+# temp = get_data(paste0('/data/ClientDataStorage/clientsData/rda_files/Tab2_',i,'.rda'))
+# gc()
+# ts3 = temp[client %in% inscope]
+# gc()
+# acctval=rbind(acctval,ts3)
+# rm(ts3)
+# gc()
+# print(i)
+# }
+# acctval[,yeartrans := format(account_date,'%Y') %>% as.numeric]
+# 
+# saveRDS(acctval,file='acctval.Rds') # take ages to save
+
+# save(acctval,file='acctval.Rda') # take larger storage
+
+acctval = readRDS('acctval.Rds')
+
+annacct = acctval[,.(
+  PortVal = mean(tot_val, na.rm = T)
+),by = .(client,yeartrans)]
+# save(annacct,file='/data/JavaXu/annacct.rda')
+```
+
+```{r useSQdaily_perf}
+
+load('desc.rda')
+
+regtable[, end_obs := ifelse(!is.na(closing_date), closing_date,
+                                       ifelse(last_tr < as.Date('2017-01-01'), last_tr, # if for two years no trade, then considered closed
+                                       NA       
+                                       ))]  # otherwise considered still running
+regtable$end_obs %<>% as.Date
+
+
+
+# acctval = readRDS('acctval.Rds')
+# gc()
+# acctval <- acctval[, qtr := account_date %>% as.yearqtr]
+# gc()
+
+# acctval[client==201571]
+#       client   cash_val assets_val    tot_val    daily_perf cashin cashout account_date yeartrans     qtr
+#    1: 201571   403.1624          0   403.1624 -7.602889e-04      0       0   2009-01-01      2009 2009 Q1
+#    2: 201571   403.9373          0   403.9373  1.920155e-03      0       0   2009-01-02      2009 2009 Q1
+#    3: 201571 17295.0701          0 17295.0701  3.756917e+00      0       0   2009-01-05      2009 2009 Q1
+# Why am I using daily_perf directly, instead of constructing my own? because it is almost impossible to construct -- with example above, there is obvious cashin between 2009-01-02 and 2009-01-05 but it's not recorded. If we use daily_perf directly, we can simply filter out outlier returns (e.g. higher than 0.2) 
+
+# perfdt = regtable[, list(qtr = seq(
+#   first_tr %>% as.yearqtr %>% as.Date, # start quarter
+#   ifelse(is.na(end_obs), '2018-12-31', end_obs) %>% as.Date %>% as.yearqtr %>% as.Date, # end quarter
+#   by = 'quarters')
+#   ), by = .(client)]
+# 
+# perfdt[, qtr:= qtr%>% as.yearqtr]
+
+# save(perfdt, file = 'perfdt.rda')
+
+# SMI index
+# load('SMI.rda')
+# tempdays = seq.Date(index(SMI) %>% min, index(SMI) %>% max, 'days')
+# SMI = approx(x = index(SMI), y = SMI %>% as.numeric, xout = tempdays)$y
+# smiret = data.table(smidailyret = log(SMI[-1]/SMI[-length(SMI)]), account_date = tempdays[-1])
+# save(smiret, file = 'smiret.rda')
+
+load('perfdt.rda')
+perfdt = merge(perfdt, regtable[,c('client', 'first_tr','end_obs')])
+perfdt[, ':='(StillInNxtQtr = ifelse(is.na(end_obs) | end_obs > as.Date(qtr+0.25), 1, 0),
+              period_end = pmin(as.Date(qtr+0.25),end_obs, na.rm = T))][,
+              AgeDays := difftime(period_end, first_tr, unit = 'days')]
+# save(perfdt, file = 'perfdt2.rda')
+
+# clientdaily = acctval[(daily_perf > -0.2) & (daily_perf < 0.2), c('client', 'account_date', 'daily_perf')] %>% unique
+# load('smiret.rda')
+# 
+# clientdaily = merge(clientdaily, smiret)
+# saveRDS(clientdaily,file='clientdaily.Rds')
+
+clientdaily = readRDS('clientdaily.Rds')
+clientdaily[, daily_perf_excess := daily_perf - smidailyret]
+
+clientdaily_matrix = dcast(clientdaily, client ~ account_date, value.var = 'daily_perf')
+clientdaily_excs_matrix = dcast(clientdaily, client ~ account_date, value.var = 'daily_perf_excess')
+
+# clientport = perfdt[client %in% clientdaily_matrix$client, c('client', 'qtr', 'StillInNxtQtr', 'period_end')]
+# save(clientport, file = 'clientport.rda')
+dates = names(clientdaily_matrix)[-1] %>% as.Date
+clientport[, clientind := match(client, clientdaily_matrix$client)]
+
+ret_ma = clientdaily_matrix %>% as.matrix
+exr_ma = clientdaily_excs_matrix %>% as.matrix
+
+ret_ma[,1] = NA
+exr_ma[,1] = NA
+
+retcounts = ret_ma
+retcounts[] = 1
+retcounts[is.na(ret_ma)] = 0
+retcounts = apply(retcounts,1,cumsum)
+
+ret_ma[is.na(ret_ma)] = 0
+ret_ma = apply(ret_ma,1,cumsum)
+
+exr_ma[is.na(exr_ma)] = 0
+exr_ma = apply(exr_ma,1,cumsum)
+
+retdist = list()
+```
+
+```{r useSQdaily_perfplot, eval=T, echo=T, include = T, message=T}
+shftval = seq(0, 360, 120)
+hrznval = c(30, 120, 365, 730, 1826, 3652)
+load('perfdt2.rda')
+# for (shft in shftval){
+#   temp = clientport[,list(
+#     client = client,
+#     qtr = qtr,
+#     clientind = clientind,
+#     period_end = period_end - shft)]
+#   for (hrzn in hrznval){
+#     temp[, period_begin := period_end - hrzn]
+#     endates = unique(temp$period_end)
+#     endatesind = sapply(endates, function(x) max(which(dates < x)))
+#     temp$endind = endatesind[match(temp$period_end, endates)]+1
+#     
+#     begindates = unique(temp$period_begin)
+#     begindatesind = sapply(begindates, function(x) min(which(dates >= x)))
+#     temp$begind = begindatesind[match(temp$period_begin, begindates)] # no +1 here because we use ret_ma instead of clientdaily_matrix
+#     
+#     temp = temp[is.finite(endind+begind)]
+#     
+#     temp[, countret := retcounts[endind, clientind] - retcounts[begind, clientind], by = rownames(temp)]
+#     temp = temp[countret>0]
+#     temp[, ':='(
+#       sumret = ret_ma[endind, clientind] - ret_ma[begind, clientind],
+#       sumexcret = exr_ma[endind, clientind] - exr_ma[begind, clientind]
+#       ),
+#       by = rownames(temp)]
+#     
+#     temp[,  ':='(
+#       avgret = sumret / countret,
+#       avgexcret = sumexcret / countret
+#       )]
+#     
+#     retdist[[paste0('shft',shft)]][[paste0('hrzn',hrzn)]] = temp[, c('client','qtr','avgret','avgexcret')]
+#     
+#     print(paste(shft,hrzn))
+#   }
+# }
+
+# save(retdist, file = 'retdist.rda')
+
+load('retdist.rda')
+# par(ann = F)
+
+# comparing distributions
+ageq = seq(0.25,1,0.25)
+for (shft in shftval){
+  for (hrzn in hrznval){
+    df = retdist[[paste0('shft',shft)]][[paste0('hrzn',hrzn)]]
+    df0 = merge(df, perfdt[,c('client', 'qtr', 'StillInNxtQtr', 'AgeDays')], by = c('client', 'qtr'))
+    agequantile = quantile(df0$AgeDays, ageq)
+    for (i in 1:length(ageq)){
+      agemin = ifelse(i==1, -1, agequantile[i-1])
+      df = df0[AgeDays <=  agequantile[i] & AgeDays >  agemin]
+      for (j in c('avgret','avgexcret')){
+        p1 = df[StillInNxtQtr == 1][[j]] %>% density(na.rm=T, n = 59999)
+        p2 = df[StillInNxtQtr == 0][[j]] %>% density(na.rm=T, n = 59999)
+        ymax = max(p1$y,p2$y)
+        xrange = range(c(p1$x[p1$y > 0.001 * ymax]), c(p2$x[p2$y > 0.01 * ymax]))
+        p1 %>% plot(xlim= xrange, ylim = c(0,ymax), 
+                    main = paste('Average', ifelse(j == 'avgret', '', 'Excess'), 'Return over', hrzn, 
+                                 'days,\nShift back', shft, 'days, Experience between', max(agemin,0), 'and', agequantile[i], 'days'))
+        p2 %>% lines(col = 'red')
+        t.test(df[StillInNxtQtr == 1][[j]],df[StillInNxtQtr == 0][[j]]) %>% print
+  }
+    }
+  }
+}
+
+
+# comparing survival likelihoood & age
+retrunqs = 10
+agecol = rainbow(length(ageq))
+
+for (hrzn in hrznval){
+  for (shft in shftval){
+    df = retdist[[paste0('shft',shft)]][[paste0('hrzn',hrzn)]]
+    df0 = merge(df, perfdt[,c('client', 'qtr', 'StillInNxtQtr', 'AgeDays')], by = c('client', 'qtr'))
+    agequantile = quantile(df0$AgeDays, ageq)
+    for (j in c('avgret','avgexcret')){
+      plot(NULL, xlim = c(0,1), ylim = c(0.96,1), 
+           xlab = 'Return quantile', ylab = 'Survival rate',
+           main = paste('Average', ifelse(j == 'avgret', '', 'Excess'), 'Return over', hrzn, 
+                                 'days,\nShift back', shft, 'days'))
+      for (i in 1:length(ageq)){
+        agemin = ifelse(i==1, -1, agequantile[i-1])
+        df = df0[AgeDays <=  agequantile[i] & AgeDays >  agemin]
+        df$retrunq = ceiling(rank(df[[j]])/length(df[[j]]) * retrunqs) / retrunqs
+        temp = merge(df[StillInNxtQtr == 1,.N, by = .(retrunq)] %>% setnames(c('retrunq','survival')),
+              df[,.N, by = .(retrunq)] %>% setnames(c('retrunq','total')), all = T)[,srate := survival/total]
+        lines(temp$retrunq,temp$srate, col = agecol[i])
+      }
+      legend('bottomright', legend = paste(1:length(ageq), 'quartile'), col = agecol, lty = 1, title = 'Age quartile')
+      lm(StillInNxtQtr ~ get(j) + AgeDays, data = df0) %>% summary %>% print
+    }
+  }
+}
+
+
+
+
+
+# temp = qtret[,c('client', 'qtr', 'LogRetMean')] %>% setnames(c('client', 'qtr', 'LogRetMean0'))
+# 
+# for (shft in 0:4){
+#   temp1 = copy(temp) # if you dont use copy, temp1 will change along with temp
+#   temp <- temp[,qtr := qtr %>% as.yearqtr %>% as.Date(frac = (2^shft+1))]
+#   temp = merge(temp1, temp, by = c('client', 'qtr'), all = T)
+#   colnames(temp)[-(1:2)] = paste0('LogRetMeantMinus', 0:(2^(shft+1)-1))
+# }
+
+
+# temp = clientdaily[, .N, by = .(client)]
+# temp = temp$client[temp$N == 1]
+# 
+# clientdaily = clientdaily[!(client %in% temp)]
+# 
+# clientdaily = clientdaily[ ,approx(
+#   x=account_date, y=daily_perf, xout=seq.Date(min(account_date), max(account_date), 'days')
+#   ), by = .(client)]
+# 
+# qtret = acctval[(daily_perf > -0.2) & (daily_perf < 0.2)] 
+# # calculate excess daily performance
+
+# 
+# saveRDS(qtret,file='qtret.Rds')
+
+# qtret = readRDS('qtret.Rds')
+
+# smiret = smiret[match(names(clientdaily_matrix)[-1] %>% as.Date, smiret$account_date)]$smidailyret
+# 
+# # clientdaily_exc_matrix = sweep(clientdaily_matrix[,-1],2,smiret,'-')
+# # clientdaily_exc_matrix[,-1] = 
+# 
+# names(clientdaily)[2:3] = c('account_date','daily_perf')
+# 
+# sample = clientdaily[1:99999]
+# temp = dcast(sample, client~ account_date, value.var = 'daily_perf')
+# 
+# cumret = clientdaily[, list(
+#   account_date = account_date,
+#   cum_daily_perf = cumsum(daily_perf),
+#   cum_daily_perf_excess = cumsum(daily_perf_excess)
+# ),by = c('client')]
+```
+
+```{r acctvalue}
+
+(1+x) %>% log %>% mean %>% exp # geometric mean
+
+load('/data/JavaXu/annacct.rda')
+
+# Port_data[,yeartrans := as.numeric(format(date,'%Y'))]
+# 
+# temp = Port_data[,.(client,security_key,yeartrans)] %>% unique
+# temp = temp[,.(NumSec = .N), by =.(client,yeartrans)]
+# NumSec = lreg[,.(client,yeartrans,NumSec)]
+# save(NumSec, file = 'NumSec.rda')
+
+load('NumSec.rda')
+
+temp = u.trans2[order(yeartrans),.(
+  NumTrades = .N
+  ), by = .(yeartrans,client)]
+temp[, CumulTrade :=  cumsum(NumTrades)/10, by=.(client)]
+
+lreg = merge(annacct,temp) %>% 
+  merge(unique(Tab4_lt[,.(client,first_tr,closing_date)]), by = 'client') %>%
+  merge(NumSec, by = c('client','yeartrans'))
+
+lreg[,':='(
+  YearsTraded = as.numeric(paste0(yeartrans,'-12-31') %>% as.Date - first_tr)/365.2425,
+  PortVal = PortVal/1e6,
+  Surv = ifelse((is.na(closing_date))|(as.numeric(format(closing_date, '%Y'))>=(yeartrans+1)),1,0) #client still in the pool next year?
+  )][, Surv := ifelse(yeartrans == 2018 & is.na(closing_date),NA,Surv)] # if it's 2018, we don't know if the client is still in the pool in 2019
+```
+
+```{r lreg}
+#disposition regression to be updated
+load('dispoout.rda')
+
+out %<>% as.data.table %>% setNames(c('clyear', 'bd', 'br', 'bs', 'bv'))
+out$bd %<>% as.numeric
+out$br %<>% as.numeric
+out$bs %<>% as.numeric
+out$bv %<>% as.numeric
+
+out = out[nchar(clyear)>3]
+
+# different return measurements, with / without weights
+ret = u.trans_matched[, .(
+  Rit5 = mean(return5*100, na.rm=T), 
+  Rit10 = mean(return10*100, na.rm=T),
+  Rit30 = mean(return30*100, na.rm=T),# average 30-day returns earned by investors in years following their first purchase ,individual’s average return in the following year p.726
+  Rit60 = mean(return60*100, na.rm=T),
+  
+  Rit5wt = weighted.mean(return5*100, wt5, na.rm=T), 
+  Rit10wt = weighted.mean(return10*100, wt10, na.rm=T),
+  Rit30wt = weighted.mean(return30*100, wt30, na.rm=T),
+  Rit60wt = weighted.mean(return60*100, wt60, na.rm=T)  
+  
+  #, sRit = sd(return*100, na.rm=T)
+),by = .(client, yeartrans)][,yeartrans := as.numeric(yeartrans)]
+
+ret[,clyear := paste(client, yeartrans)]
+# ret %<>% merge(out, all = T)
+
+
+temp = ret[, .(Ritplus1 = Rit, sRitplus1=sRit, bdiplus1 = bd, yeartrans = yeartrans-1, client = client)] %>% merge(
+  ret[, .(Ritminus1 = Rit, sRitminus1 = sRit, yeartrans = yeartrans+1, client = client)], all = T
+) %>% merge(ret, all = T, by = c('client','yeartrans'))
+
+lreg = merge(lreg,temp)
+```
+
+```{r}
+temp = ret
+temp$yeartrans = temp$yeartrans-1
+names(temp)[-c(1,2)] %<>% paste0('plus1')
+
+lregxpd = merge(ret, temp, all = T) %>% merge(lreg)
+
+save(lregxpd, file = 'lregxpd.rda')
+```
+
+```{r lregxpdlm, eval=F}
+load('indexdata.rda')
+smiannualreturn = smiannualreturn[,-(2:3)]
+names(smiannualreturn)[2] = 'smiret'
+
+spannualreturn = spannualreturn[,-(2:3)]
+names(spannualreturn)[2] = 'spret'
+
+load('lregxpd.rda')
+
+lregxpd %<>% merge(smiannualreturn) %>% merge(spannualreturn)
+
+# lregxpdreg = lregxpd[Ritplus1 < quantile(Ritplus1,0.95, na.rm = T)]
+```
+
+```{r DifferentReturnRegressions, eval=F, echo=F, include = F}
+# this chunk does regressions with different return measurements
+
+lregxpdClean = lregxpd
+
+# for (th in c(-80, -50, -20, 0)){
+  for (i in c(5,10,30,60)){
+    for (j in c('wt','')){
+    lregxpdClean[[paste0('Rit', i, j)]] = lregxpd[[paste0('Rit', i, j)]] %>% ifelse(
+  . < quantile(.,0.99, na.rm = T) & . > -100, ., NA)
+    
+    #   print(paste0(
+    # ifelse(j == 'wt', '', 'non-'), 'weighted average ', i, '-day return (no indicator)')
+    # )
+      
+      lregxpdClean[Surv == 1, get(paste0('Rit', i, j))-smiret] %>% density(na.rm=T) %>% plot(main=paste0(ifelse(j == 'wt', '', 'non-'), 'weighted average ', i, '-day return'))
+    
+      
+      lregxpdClean[Surv == 0, get(paste0('Rit', i, j))-smiret] %>% density(na.rm=T)  %>% lines(col = 'red'
+        # main=paste0('exit:',  ifelse(j == 'wt', '', 'non-'), 'weighted average ', i, '-day return')
+        )
+#     (lregxpdClean[, list(
+#       mean(get(paste0('Rit', i, j)), na.rm = T)
+#       ), by = c('Surv', 'yeartrans')] %>% dcast(., Surv~yeartrans, value.var='V1'))[2:3,2:8] %>% as.matrix %>% barplot(beside=T)
+#
+#     survprob = glm(
+#       Surv ~ get(paste0('Rit', i, j)) + YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + smiret + I(smiret^2), 
+#   data = lregxpdClean, family = binomial(link = "probit")
+#     )
+    
+  # survprob = glm(
+  #     Surv ~ I(get(paste0('Rit', i, j))) + YearsTraded + smiret, 
+  # data = lregxpdClean, family = binomial(link = "probit")
+  #   )
+  #       
+  # 
+  # print(survprob %>% summary)
+  # 
+  #   
+  #   survprob = glm(
+  #     Surv ~ I(get(paste0('Rit', i, j)) < th) + YearsTraded + smiret, 
+  # data = lregxpdClean, family = binomial(link = "probit")
+  #   )
+  #       
+  # print(paste0(
+  #   ifelse(j == 'wt', '', 'non-'), 'weighted average ', i, '-day return < threshold ', th, '% (pure indicator)')
+  #   )
+  # print(survprob %>% summary)
+  # 
+  # 
+  #     survprob = glm(
+  #     Surv ~ I((get(paste0('Rit', i, j)) < th)*get(paste0('Rit', i, j))) + YearsTraded + smiret, 
+  # data = lregxpdClean, family = binomial(link = "probit")
+  #   )
+  #       
+  # print(paste0(
+  #   ifelse(j == 'wt', '', 'non-'), 'weighted average ', i, '-day return * (return < threshold ', th, '%)')
+  #   )
+  # print(survprob %>% summary)
+  }
+  }
+# }
+```
+
+```{r lm}
+load('/data/JavaXu/lreg.rda')
+
+lreg[,':='(
+  sitplus1 = is.finite(Ritplus1) %>% as.numeric,
+  YearsTraded = as.numeric(paste0(yeartrans,'-12-31') %>% as.Date - first_tr)/365.2425,
+  PortVal = PortVal/1e6
+  )]
+
+linreg = lreg[Ritplus1 < quantile(Ritplus1,0.95, na.rm = T)]
+
+lm1=lm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = linreg)
+
+lmb1=lm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = lreg)
+
+
+# plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal, data = linreg, index = c('yeartrans'), effect = "time") # closer to seru's result
+# 
+# plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal, data = linreg, index = c('yeartrans'
+#                                                                                                        ,'client' # this argument has no influence! (because effect is still "individual", not "twoways")
+#                                                                                                        )
+#     , model = 'within' # this argument has no influence result because "within" is default
+#     ) # is equivalent to lm1: Unbalanced Panel: n = 7, T = 18051-19727, N = 133388
+# 
+# 
+# plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = linreg
+#     , model = 'within' # this argument has no influence result because "within" is default
+#     ) # is NOT equivalent
+
+lm2=lm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+lmb2=lm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+
+# linreg[,client:=as.factor(client)]
+
+# lm3=lm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(client) + factor(yeartrans), data = linreg)
+
+# lm3 = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal, data = linreg, index = c('client','yeartrans'), model = 'within') # when using within, first coefficient is missing, random means betas are not constant, pooling is equilevant to no time&individual effects at all
+# 
+# lm3 = plm(Ritplus1 ~ factor(yeartrans) + YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = linreg, index = c('client','yeartrans'), effect = 'twoways', model = 'within') # collinearity between years traded and year effect!
+
+lm3 = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = linreg, index = c('client'), model = 'within')
+lmb3 = plm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal + factor(yeartrans), data = lreg, index = c('client'), model = 'within')
+
+lm4 = plm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + PortVal + factor(yeartrans), 
+          data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], index = c('client'), model = 'within')
+lmb4 = plm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + PortVal + factor(yeartrans), 
+           data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], index = c('client'), model = 'within')
+
+# plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + PortVal, data = linreg, index = c('client'), model = 'within')
+# lm4=plm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + PortVal, data = linreg, index = c('client','yeartrans'), model = 'within')
+
+
+
+# wealth = lreg[, .( w75 = quantile(PortVal, 0.75, na.rm = T)), by = .(yeartrans)]
+# tworeg = merge(lreg, wealth, by = 'yeartrans')[Ritminus1 < quantile(Ritminus1, 0.95, na.rm = T) & is.finite(sRitminus1), ]
+
+wealth = quantile(lreg$PortVal, 0.75, na.rm = T)  # wealth threshold 75% quantile
+optiontaders = u.trans[asset_type %in% c(67, 68), client] %>% unique
+
+tworeg =lreg[Ritminus1 < quantile(Ritminus1, 0.95, na.rm = T) & CumulTrade < quantile(CumulTrade, 0.99, na.rm = T) & is.finite(sRitminus1), ]
+tworeg[, ':='(Wealthy = as.numeric(PortVal > wealth), TradesOptions = as.numeric(client %in% optiontaders))]
+
+
+# The first-stage probit model is estimated each year -- table note of Table 4
+for (i in unique(tworeg$yeartrans)){
+  temp = Rchoice(
+  sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy, 
+  data = tworeg[yeartrans==i], family = binomial('probit')
+  # , index = c('client')
+  )
+
+imr = data.table(tworeg[yeartrans==i,.(client)], yeartrans = i, qnorm(temp$probabilities)/temp$probabilities)
+
+names(imr)[3] = paste0('imr',i)
+lreg %<>% merge(imr, all = T, incomparables = 0)
+}
+
+
+for (x in grep('imr',names(lreg))){
+  set(lreg, i = which(is.na(lreg[[x]])), j = x, value = 0)
+}
+
+fd1 = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + imr2012 + imr2013 + imr2014 + imr2015 + imr2016 + imr2017 + imr2018,
+          data = lreg[Ritplus1 < quantile(Ritplus1,0.95, na.rm = T) & CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], model = 'fd') 
+
+fdb1 = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + sRitminus1 + imr2012 + imr2013 + imr2014 + imr2015 + imr2016 + imr2017 + imr2018,
+          data = lreg[Ritplus1 < quantile(Ritplus1,0.95, na.rm = T) & is.finite(sRitminus1) & CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], model = 'fd') 
+
+# pglm(sitplus1 ~ Ritminus1 + factor(yeartrans), data = linreg, family = binomial('probit'), index = c('client')) # takes too long
+
+prb1 = Rchoice(sitplus1 ~ Ritminus1 + factor(yeartrans), data = tworeg, family = binomial('probit'), index = c('client'))
+prb2 = Rchoice(sitplus1 ~ Ritminus1 + sRitminus1 + TradesOptions + Wealthy + factor(yeartrans), data = tworeg[is.finite(sRitminus1)], family = binomial('probit'), index = c('client'))
+prb3 = Rchoice(
+  sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy, 
+  data = tworeg[is.finite(sRitminus1)], family = binomial('probit'), index = c('client'))
+
+# foo = tworeg[yeartrans==i]
+# pglm(
+#     sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy, 
+#     data = foo, family = binomial('probit'), index = c('client'))
+
+# pglm(sitplus1 ~ Ritminus1 + sRitminus1, data = linreg, family = binomial('probit'), index = c('client'), model = 'within')
+```
+
+```{r ourlm}
+lm1smi = lm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), data = linreg)
+lm1sp = lm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), data = linreg)
+lm1final = lm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), data = linreg)
+
+lmb1smi = lm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), data = lreg)
+lmb1sp = lm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), data = lreg)
+lmb1final = lm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), data = lreg)
+
+lm2smi = lm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), 
+            data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+lm2sp = lm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), 
+           data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+lm2final = lm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), 
+              data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+
+lmb2smi = lm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), 
+             data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+lmb2sp = lm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), 
+            data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+lmb2final = lm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), 
+               data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)])
+
+lm3smi = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), data = linreg, index = c('client'), model = 'within')
+lm3sp = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), data = linreg, index = c('client'), model = 'within')
+
+lmb3smi = plm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), data = lreg, index = c('client'), model = 'within')
+lmb3sp = plm(bdiplus1 ~ YearsTraded + I(YearsTraded^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), data = lreg, index = c('client'), model = 'within')
+
+lm4smi = plm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), 
+             data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], index = c('client'), model = 'within')
+lm4sp = plm(Ritplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), 
+            data = linreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], index = c('client'), model = 'within')
+
+lmb4smi = plm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + smiret + I(smiret^2), 
+              data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], index = c('client'), model = 'within')
+lmb4sp = plm(bdiplus1 ~ CumulTrade + I(CumulTrade^2) + NumSec + NumTrades + log(PortVal+5) + spret + I(spret^2), 
+             data = lreg[CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], index = c('client'), model = 'within')
+
+# wealth = quantile(lreg$PortVal, 0.75, na.rm = T)  # wealth threshold 75% quantile
+# optiontaders = u.trans[asset_type %in% c(67, 68), client] %>% unique
+
+# tworeg =lreg[Ritminus1 < quantile(Ritminus1, 0.95, na.rm = T) & CumulTrade < quantile(CumulTrade, 0.99, na.rm = T) & is.finite(sRitminus1), ]
+# tworeg[, ':='(Wealthy = as.numeric(PortVal > wealth), TradesOptions = as.numeric(client %in% optiontaders))]
+
+
+# The first-stage probit model is estimated each year -- table note of Table 4
+for (i in unique(tworeg$yeartrans)%>%sort){
+  temp = Rchoice(
+  sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I((CumulTrade)^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy, 
+  tworeg[yeartrans==i], family = binomial('probit')
+  # , index = c('client'), panel = T # when year is fixed, individual effects don't matter
+  )
+  
+#   temp1 = glm(
+#     sitplus1 ~ YearsTraded + I(YearsTraded^2) + I(log(CumulTrade+1)) + I(log(CumulTrade+1)^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy,
+#     data = tworeg[yeartrans==i], family = binomial(link = "probit")
+# # ,control = list(maxit = 100)
+#     ) # similar result with glm
+
+imr = data.table(tworeg[yeartrans==i,.(client)], yeartrans = i, qnorm(temp$probabilities)/temp$probabilities)
+
+names(imr)[3] = paste0('imr',i)
+lreg %<>% merge(imr, all = T, incomparables = 0, by = c('client','yeartrans'))
+}
+
+
+for (x in grep('imr',names(lreg))){
+  set(lreg, i = which(is.na(lreg[[x]])), j = x, value = 0)
+}
+
+fd1 = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + imr2012 + imr2013 + imr2014 + imr2015 + imr2016 + imr2017 + imr2018,
+          data = lreg[Ritplus1 < quantile(Ritplus1,0.95, na.rm = T) & CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], model = 'fd') 
+
+fdb1 = plm(Ritplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + sRitminus1 + imr2012 + imr2013 + imr2014 + imr2015 + imr2016 + imr2017 + imr2018, data = lreg[Ritplus1 < quantile(Ritplus1,0.95, na.rm = T) & is.finite(sRitminus1) & CumulTrade < quantile(CumulTrade, 0.99, na.rm = T)], model = 'fd') 
+
+
+prb1smi = Rchoice(sitplus1 ~ Ritminus1 + smiret + I(smiret^2), data = tworeg, family = binomial('probit'), index = c('client'))
+prb1sp = Rchoice(sitplus1 ~ Ritminus1 + spret + I(spret^2), data = tworeg, family = binomial('probit'), index = c('client'))
+
+prb1final = lm(
+  sitplus1 ~ Ritminus1 + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), 
+  data = tworeg[is.finite(sRitminus1)])
+
+
+prb2smi = Rchoice(sitplus1 ~ Ritminus1 + sRitminus1 + TradesOptions + Wealthy + smiret + I(smiret^2), data = tworeg[is.finite(sRitminus1)], family = binomial('probit')
+                  # , index = c('client')
+                  )
+prb2sp = Rchoice(sitplus1 ~ Ritminus1 + sRitminus1 + TradesOptions + Wealthy + spret + I(spret^2), data = tworeg[is.finite(sRitminus1)], family = binomial('probit')
+                 # , index = c('client')
+                 )
+
+prb2final = lm(
+  sitplus1 ~ Ritminus1 + sRitminus1 + TradesOptions + Wealthy + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), 
+  data = tworeg[is.finite(sRitminus1)])
+
+prb3smi = Rchoice(
+  sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy + smiret + I(smiret^2), 
+  data = tworeg[is.finite(sRitminus1)], family = binomial('probit'), index = c('client'))
+prb3sp = Rchoice(
+  sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy + spret + I(spret^2), 
+  data = tworeg[is.finite(sRitminus1)], family = binomial('probit'), index = c('client'))
+
+prb3final = lm(
+  sitplus1 ~ YearsTraded + I(YearsTraded^2) + CumulTrade + I(CumulTrade^2) + Ritminus1 + sRitminus1 + TradesOptions + Wealthy + smiret + I(smiret^2) + spret + I(spret^2) + I(yeartrans-2010), 
+  data = tworeg[is.finite(sRitminus1)])
+```
+
+```{r include = F, eval = F, echo = F}
+# save(lm1, lm2, lm3, lm4, lmb1, lmb2, lmb3, lmb4, prb1, prb2, prb3, fd1, fdb1, file = 'regs.rda')
+# save(lm1smi, lm2smi, lm3smi, lm4smi, lmb1smi, lmb2smi, lmb3smi, lmb4smi, prb1smi, prb2smi, prb3smi,
+# lm1sp, lm2sp, lm3sp, lm4sp, lmb1sp, lmb2sp, lmb3sp, lmb4sp, prb1sp, prb2sp, prb3sp,
+# lm1final, lm2final, lmb1final, lmb2final, prb1final, prb2final, prb3final,
+# file = 'ourregs.rda')
+
+# save(regtable, u.trans2, file='desc.rda')
+
+load('desc.rda')
+load('regs.rda')
+load('ourregs.rda')
+```
+
+```{r sumstats, include = F, eval = F, echo = F}
+# pers$tradingage = Age[pers$client %>% as.character,NCOL(Age)] #Trading age as at 2018 year end, but what if account closed before?...
+
+regtable[, actualby := ifelse(format(first_tr,'%Y') %>% as.numeric - birth_year > 12 & birth_year > 1900, birth_year, NA)][, bioage := 2018 - actualby]
+
+vars = c(
+  # 'tradingage',
+         'nsec','ntrade','mean_chf_tr','bioage','gender')
+desst = cbind(n.obs = regtable[,vars,with=F] %>% apply(2, function(x) sum(is.finite(x))),
+             min = regtable[,vars,with=F] %>% apply(2, function(x) min(x, na.rm=T)),
+      mean = regtable[,vars,with=F] %>% apply(2, function(x) mean(x, na.rm=T)),
+      median = regtable[,vars,with=F
+                        ] %>% apply(2, function(x) median(x, na.rm=T)),
+     max = regtable[,vars,with=F] %>% apply(2, function(x) max(x, na.rm=T)),
+     sd = regtable[,vars,with=F] %>% apply(2, function(x) sd(x, na.rm=T))) 
+# %>% 
+#   setnames(c('N. obs.','min','mean','median','max','SD'))
+
+desst
+```
+
+# Empirical plots
+
+```{r survcurveemp, include = F, eval = F, echo = F}
+# optiontaders = u.trans[asset_type %in% c(67, 68), client] %>% unique
+# save(regtable,optiontaders,file= 'survcurve.rda')
+
+# empirical survival curve
+load('survcurve.rda')
+
+regtable[, ':='(uncensored = ifelse(is.na(closing_date), 0,1), 
+                lastobs = ifelse(is.na(closing_date), last_tr,closing_date) %>% as.Date,
+                TradesOptions = as.numeric(client %in% optiontaders))][, ':='(
+                lifetime = difftime(lastobs, first_tr, units = 'days')+0.25,
+                enterage = as.numeric(format(first_tr,'%Y')) - actualby
+                )]
+
+# define subset of cohorts for survival plot
+subsets = list(
+  Aggregated = 1:NROW(regtable),
+  EnterBefore2008 = which(as.numeric(format(regtable$first_tr,'%Y')) < 2008),
+  EnterFrom2008To2010 = which(as.numeric(format(regtable$first_tr,'%Y')) >= 2008 & as.numeric(format(regtable$first_tr,'%Y')) <= 2010),
+  EnterAfter2010 = which(as.numeric(format(regtable$first_tr,'%Y')) > 2010),
+  EnterAgeBelow34 = which(regtable$enterage < 34),
+  EnterAgeFrom34To45 = which(regtable$enterage >= 34 & regtable$enterage <= 45),
+  EnterAgeAbove45 = which(regtable$enterage > 45),
+  OptionTrader = which(regtable$TradesOptions ==1),
+  NonOptionTrader = which(regtable$TradesOptions !=1),
+  Women = which(regtable$gender),
+  Men = which(!regtable$gender)
+)
+
+for (i in 1:length(subsets)){
+surtbl = regtable[subsets[[i]],]
+clientsurv = with(surtbl, Surv(lifetime,uncensored))
+
+par(bty = 'l')
+
+cssum = as.data.frame(summary(survfit(clientsurv ~ 1))[c(
+  "time", "n.risk", "n.event", "surv", "std.err", "lower", "upper"
+  )])
+
+# coxph(Surv(lifetime,uncensored) ~ Rit60wt+smiret,data = surtbl)
+# temp = glm(Surv ~ Rit60wt + smiret,data = surtbl, family = binomial(link = "probit"))
+
+xlimax = rev(cssum$time)[4]
+clientsurv %>% plot(ylim = c(0,1), xlim = c(0,xlimax),xaxs ='i', yaxs ='i',
+                    xlab = 'Trading experience since first trade (days)', ylab = 'survival rate')
+
+
+nlag = 60
+cssum$slope = c(rep(NA,nlag/2), diff(cssum$surv,lag=nlag)/diff(cssum$time,lag=nlag), rep(NA,nlag/2))
+cssum$intercept = cssum$surv - cssum$slope*cssum$time
+cssum = cssum[-NROW(cssum)+(0:1),]
+
+abline(h=0.5, col = 'red',lwd = 0.5)
+
+avgrate = (min(cssum$surv)-1)/max(cssum$time)
+abline(a=1, b=avgrate, col = 'blue')
+temp = which.max(cssum$slope)
+
+linelen = xlimax/10
+segments(x0=cssum$time[temp] - linelen, y0 = cssum$surv[temp] - linelen * cssum$slope[temp], 
+        x1 = cssum$time[temp] + linelen, y1 = cssum$surv[temp] + linelen * cssum$slope[temp],
+        col = 'violet')
+
+text(labels = paste0('experience: ',cssum$time[temp], ' days\nexit rate: ', round(100*cssum$slope[temp],4), '% / day'),
+     x=cssum$time[temp]+1050, y = cssum$surv[temp], adj = c(0,0), xpd = T)
+
+temp = which.min(cssum$slope)
+segments(x0=cssum$time[temp] - linelen, y0 = cssum$surv[temp] - linelen * cssum$slope[temp], 
+        x1 = cssum$time[temp] + linelen, y1 = cssum$surv[temp] + linelen * cssum$slope[temp],
+        col = 'violet')
+
+text(labels = paste0('experience: ',cssum$time[temp], ' days\nexit rate: ', round(100*cssum$slope[temp],4), '% / day'),
+     x=cssum$time[temp], y = cssum$surv[temp], adj = c(1,1))
+
+legend('topright', legend = paste0(names(subsets)[i], '\n# obs: ',NROW(surtbl)), bty = 'n', text.col = 'grey30', cex = 1.2)
+legend('bottomleft', legend = c(
+  '90% confidence interval', 'empirical survival', paste0(
+    'average exit rate\n(age 0 - ', max(cssum$time), ' days): ', round(100*avgrate,4), '% / day'
+    )), lty = c(2,1,1), col = c('black','black','blue'),bty = 'n'
+)
+}
+
+
+```
+
+```{r partyear, include = F, eval = F, echo = F}
+partyear = u.trans2[,c('client','yeartrans')] %>% unique %>% .$yeartrans %>% table
+par(xpd = T)
+foo = partyear %>% barplot(ylab = 'Number of clients placing trades')
+text(partyear, x=foo, y = partyear, cex = 0.7, adj = c(0.5,0))
+```
+
+```{r exitperyear, include = F, eval = F, echo = F}
+
+exitperyear = regtable %>%
+  transform(exitage = round(as.numeric(closing_date-first_tr)/365.2425),
+            closingyear = format(closing_date,'%Y')) %>% 
+  .[!is.na(closing_date),c('exitage','closingyear')] %>% table
+
+exitperyear %>% barplot(beside=T, 
+                        legend=1:17, 
+                        args.legend=list(
+      x=170,
+      y=-80,
+      bty = "n",
+      title='Exit age', horiz = T, cex =0.6
+    ))
+
+# tworeg[yeartrans==i]$YearsTraded %>% hist %>% plot
+```
+
+```{r include = T, eval = F, echo = F}
+linreg = linreg[Ritplus1>-100][,rYearsTraded := round(YearsTraded)]
+plot(linreg$YearsTraded,linreg$Ritplus1, cex = 0.2, ylim = c(-80,10))
+foo = lm(linreg$Ritplus1 ~ linreg$YearsTraded + I(linreg$YearsTraded^2))$fitted
+lines(linreg$YearsTraded,foo, col = 'blue', lwd = 2)
+
+abline(h=0, col = 'red')
+# temp = linreg[,mean(Ritplus1), by = .(rYearsTraded)] %>% as.matrix
+# # lines(temp[,1],temp[,2], col = 'red')
+# 
+# temp = linreg[,median(Ritplus1), by = .(rYearsTraded)]%>% as.matrix
+# lines(temp[,1],temp[,2], col = 'red')
+
+```
+
+## Tab 3, Col 1, Page 720
+```{r include = T, eval = F, echo = F}
+lm1 %>% summary
+
+lm1smi %>% summary
+
+lm1sp %>% summary
+
+lm1final %>% summary
+```
+
+## Tab 3, Col 2, Page 720
+```{r include = T, eval = F, echo = F}
+lm2 %>% summary
+
+lm2smi %>% summary
+
+lm2sp %>% summary
+
+lm2final %>% summary
+```
+
+## Tab 3, Col 3, Page 720
+```{r include = T, eval = F, echo = F}
+lmb1 %>% summary
+
+lmb1smi %>% summary
+
+lmb1sp %>% summary
+
+lmb1final %>% summary
+```
+
+## Tab 3, Col 4, Page 720
+```{r include = T, eval = F, echo = F}
+lmb2 %>% summary
+
+lmb2smi %>% summary
+
+lmb2sp %>% summary
+
+lmb2final %>% summary
+```
+
+## Tab 3, Col 5, Page 720
+```{r include = T, eval = F, echo = F}
+lm3 %>% summary
+
+lm3smi %>% summary
+
+lm3sp %>% summary
+```
+
+## Tab 3, Col 6, Page 720
+```{r include = T, eval = F, echo = F}
+lm4 %>% summary
+
+lm4smi %>% summary
+
+lm4sp %>% summary
+```
+
+## Tab 3, Col 7, Page 720
+```{r include = T, eval = F, echo = F}
+lmb3 %>% summary
+
+lmb3smi %>% summary
+
+lmb3sp %>% summary
+```
+
+## Tab 3, Col 8, Page 720
+```{r include = T, eval = F, echo = F}
+lmb4 %>% summary
+
+lmb4smi %>% summary
+
+lmb4sp %>% summary
+```
+
+## Tab 4, Col 1, Page 726
+```{r include = T, eval = F, echo = F}
+prb1 %>% summary
+
+prb1smi %>% summary
+
+prb1sp %>% summary
+
+prb1final %>% summary
+```
+
+## Tab 4, Col 2, Page 726
+```{r include = T, eval = F, echo = F}
+prb2 %>% summary
+
+prb2smi %>% summary
+
+prb2sp %>% summary
+
+prb2final %>% summary
+```
+
+## Tab 4, Col 3, Page 726
+```{r include = T, eval = F, echo = F}
+prb3 %>% summary
+
+prb3smi %>% summary
+
+prb3sp %>% summary
+
+prb3final %>% summary
+```
+
+## Tab 4, Col 4, Page 726
+```{r include = T, eval = F, echo = F}
+fd1 %>% summary
+```
+
+## Tab 4, Col 5, Page 726
+```{r include = T, eval = F, echo = F}
+fdb1 %>% summary
+```
