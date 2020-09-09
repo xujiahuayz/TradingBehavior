@@ -8,9 +8,9 @@
 .Rproj.user
 /data/*
 /output/*
-*/venv/*
+**/venv/*
 */.idea/*
-*/.vscode/*
+**/.vscode/*
 */__pycache__/*
 */build/*
 
