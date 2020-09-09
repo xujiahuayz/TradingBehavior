@@ -6,6 +6,7 @@
 .RDataTmp
 .DS_Store
 .Rproj.user
+/.vscode/*
 /data/*
 /output/*
 **/venv/*
