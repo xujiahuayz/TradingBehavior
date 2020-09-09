@@ -2,6 +2,7 @@
 .Proj.user
 *.rda
 *.rds
+*.zip
 .RDataTmp
 .DS_Store
 .Rproj.user
@@ -11,3 +12,4 @@
 */.vscode/*
 */__pycache__/*
 */build/*
+
