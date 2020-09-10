@@ -40,7 +40,7 @@ options(stringsAsFactors = F,
 ```
 
 ```{r include = F, eval = T, echo = F}
-datapath = './data/'
+datapath = '../data/'
 ```
 
 ```{r loadmiscdata, include = F, eval = F, echo = F}
