@@ -1,0 +1,118 @@
+
+R version 3.6.0 (2019-04-26) -- "Planting of a Tree"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(data.table)
+> library(plm)
+
+Attaching package: ‘plm’
+
+The following object is masked from ‘package:data.table’:
+
+    between
+
+> #library(pglm)
+> library(glmmML)
+> 
+> 
+> filepath = '/home/jxu/learnr/'
+> # load(paste0(filepath,'regtable.rda'))
+> # load(paste0(filepath,'cl_transferin.rda'))
+> 
+> load(paste0(filepath,'tsregressreg.rda'))
+> 
+> xx[, ':='(firstobs.y = NULL)]
+> 
+> xx[account_date < '2018-01-01', ':='(
++   ExitNxtYr = ifelse(is.finite(closing_date), (closing_date - account_date) < 365.2425, F))]
+> 
+> gc()
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells     541067    28.9    1146458    61.3     641602    34.3
+Vcells 2398602023 18299.9 3878630820 29591.7 3232125684 24659.2
+> 
+> aa =  glmmboot(ExitNxtYr ~ age + rreturn365 + gender + enterage + TradesOptions, family=binomial(link="logit"), data=xx[age < 365.2425 *3], cluster=account_date, na.action=na.omit)
+> aa$n
+[1] 22893456
+> aa$logLik
+[1] -2708748
+> summary(aa)
+
+Call:  glmmboot(formula = ExitNxtYr ~ age + rreturn365 + gender + enterage +      TradesOptions, family = binomial(link = "logit"), data = xx[age <      365.2425 * 3], cluster = account_date, na.action = na.omit) 
+
+
+                    coef  se(coef)       z Pr(>|z|)
+age            9.242e-05 6.110e-06   15.13        0
+rreturn365    -3.020e-01 2.733e-03 -110.51        0
+genderTRUE     1.358e-01 3.517e-03   38.61        0
+enterage      -3.508e-03 9.249e-05  -37.93        0
+TradesOptions -1.382e-01 5.032e-03  -27.46        0
+
+Residual deviance: Inf on 22890529 degrees of freedom 	AIC: Inf 
+> 
+> gc()
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells   23457940  1252.8  124682676  6658.8   92144081  4921.1
+Vcells 2570216953 19609.2 5598202720 42710.9 5594115833 42679.8
+> aa =  glmmboot(ExitNxtYr ~ age + rreturn365 + gender + enterage + TradesOptions, family=binomial(link="logit"), data=xx[age >= 365.2425 *3], cluster=account_date, na.action=na.omit)
+> aa$n
+[1] 75478915
+> aa$logLik
+[1] -10540302
+> summary(aa)
+
+Call:  glmmboot(formula = ExitNxtYr ~ age + rreturn365 + gender + enterage +      TradesOptions, family = binomial(link = "logit"), data = xx[age >=      365.2425 * 3], cluster = account_date, na.action = na.omit) 
+
+
+                    coef  se(coef)        z Pr(>|z|)
+age           -0.0001489 6.958e-07 -213.924 0.00e+00
+rreturn365    -0.2834339 1.575e-03 -180.005 0.00e+00
+genderTRUE     0.2056203 1.800e-03  114.203 0.00e+00
+enterage       0.0051636 4.884e-05  105.730 0.00e+00
+TradesOptions -0.0167508 2.704e-03   -6.194 5.85e-10
+
+Residual deviance: Inf on 75475988 degrees of freedom 	AIC: Inf 
+> 
+> gc()
+             used    (Mb) gc trigger    (Mb)    max used    (Mb)
+Ncells   76043403  4061.2  429362545 22930.5   303905113 16230.3
+Vcells 3035042404 23155.6 9357924143 71395.3 11625408740 88694.9
+> aa =  glmmboot(ExitNxtYr ~ age + rreturn365 + gender + enterage + TradesOptions, family=binomial(link="logit"), data=xx, cluster=account_date, na.action=na.omit)
+> aa$n
+[1] 98372371
+> aa$logLik
+[1] -13264858
+> summary(aa)
+
+Call:  glmmboot(formula = ExitNxtYr ~ age + rreturn365 + gender + enterage +      TradesOptions, family = binomial(link = "logit"), data = xx,      cluster = account_date, na.action = na.omit) 
+
+
+                    coef  se(coef)       z Pr(>|z|)
+age           -0.0001061 5.237e-07 -202.58        0
+rreturn365    -0.2877508 1.361e-03 -211.40        0
+genderTRUE     0.1921428 1.603e-03  119.89        0
+enterage       0.0030233 4.309e-05   70.17        0
+TradesOptions -0.0515126 2.382e-03  -21.63        0
+
+Residual deviance: Inf on 98369444 degrees of freedom 	AIC: Inf 
+> 
+> 
+> 
+> proc.time()
+     user    system   elapsed 
+ 9829.078   374.318 10179.480 

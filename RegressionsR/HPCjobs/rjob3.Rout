@@ -1,0 +1,79 @@
+
+R version 3.6.0 (2019-04-26) -- "Planting of a Tree"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(data.table)
+> library(plm)
+
+Attaching package: ‘plm’
+
+The following object is masked from ‘package:data.table’:
+
+    between
+
+> #library(pglm)
+> library(glmmML)
+> 
+> 
+> filepath = '/home/jxu/learnr/'
+> # load(paste0(filepath,'regtable.rda'))
+> # load(paste0(filepath,'cl_transferin.rda'))
+> 
+> load(paste0(filepath,'tsregressreg.rda'))
+> 
+> xx[, ':='(firstobs.y = NULL)]
+> 
+> xx[account_date < '2018-01-01', ':='(
++   ExitNxtYr = ifelse(is.finite(closing_date), (closing_date - account_date) < 365.2425, F))]
+> 
+> #gc()
+> #aa =  glmmboot(ExitNxtYr ~ age + rreturn365, family=binomial(link="logit"), data=xx[age < 365.2425 *3], cluster=account_date, na.action=na.omit)
+> #aa
+> #summary(aa)
+> 
+> gc()
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells     541067    28.9    1146458    61.3     641602    34.3
+Vcells 2398602023 18299.9 3878630820 29591.7 3232125684 24659.2
+> aa =  glmmboot(ExitNxtYr ~ age + rreturn365, family=binomial(link="logit"), data=xx[age >= 365.2425 *3], cluster=account_date, na.action=na.omit)
+> aa
+
+Call:  glmmboot(formula = ExitNxtYr ~ age + rreturn365, family = binomial(link = "logit"),      data = xx[age >= 365.2425 * 3], cluster = account_date, na.action = na.omit) 
+
+
+                 coef  se(coef)      z Pr(>|z|)
+age        -0.0001489 6.914e-07 -215.3        0
+rreturn365 -0.2708875 1.565e-03 -173.0        0
+
+Residual deviance: Inf on 75616462 degrees of freedom 	AIC: Inf 
+> summary(aa)
+
+Call:  glmmboot(formula = ExitNxtYr ~ age + rreturn365, family = binomial(link = "logit"),      data = xx[age >= 365.2425 * 3], cluster = account_date, na.action = na.omit) 
+
+
+                 coef  se(coef)      z Pr(>|z|)
+age        -0.0001489 6.914e-07 -215.3        0
+rreturn365 -0.2708875 1.565e-03 -173.0        0
+
+Residual deviance: Inf on 75616462 degrees of freedom 	AIC: Inf 
+> 
+> gc()
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells   76181828  4068.6  408742964 21829.3  303046838 16184.5
+Vcells 3035695313 23160.6 9670030250 73776.5 9642317815 73565.1
+> aa =  glmmboot(ExitNxtYr ~ age + rreturn365, family=binomial(link="logit"), data=xx, cluster=account_date, na.action=na.omit)
