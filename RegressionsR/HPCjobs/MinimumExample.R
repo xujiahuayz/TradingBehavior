@@ -3,8 +3,8 @@ getwd()
 
 library(data.table)
 
-datapath = '../../data/'
-outputpath = '../../output/'
+datapath = '/home/jxu/TradingBehavior/data/'
+outputpath = '/home/jxu/TradingBehavior/output/'
 
 insiders = fread(paste0(datapath, 'insiders_accounts.txt'),
                  sep = ";", header = T, col.names = c(
