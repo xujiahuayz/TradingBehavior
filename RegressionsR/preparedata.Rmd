@@ -44,17 +44,20 @@ datapath = '../data/'
 ```
 
 ```{r loadmiscdata, include = F, eval = F, echo = F}
+time0 = Sys.time()
 ### insiders
 insiders = fread('insiders_accounts.txt' %>% paste0(datapath, .),
                  sep = ";", header = T, col.names = c(
   "client", "attr_id", "attr_val"))
 
+Sys.time() - time0
 
 ### personas info
 persID = fread('persons_accounts.txt' %>% paste0(datapath, .),
                  sep = ";", header = T, col.names = c(
   "account_id", "person_id", "title_label", "birth_year", "language", "numbered", "company_flag")) # we do not use person_id in the end because some people use different trading strategies for different account anyway.
 
+Sys.time() - time0
 
 ### type of accounts
 acc_types = fread('accounts_types.txt' %>% paste0(datapath, .),
@@ -70,10 +73,10 @@ Tab4ext = fread('Tab4_extended.txt' %>% paste0(datapath, .),
   "status",  "status_val", "acc_status_date"))
 
 
-Tab4ext[, ':='(
-  acc_status_date = fast_strptime(acc_status_date, "%Y-%m-%d") %>% as.Date
-)]
-# 1000 times faster than Tab4ext$acc_status_date %<>% as.Date
+# Tab4ext[, ':='(
+#   acc_status_date = fast_strptime(acc_status_date, "%Y-%m-%d") %>% as.Date
+# )]
+# # 1000 times faster than Tab4ext$acc_status_date %<>% as.Date -- gives error now
 
 ### Maybe we should consider deleting HNW accounts?
 Tab4ext$acc_status_date %<>% as.Date
@@ -90,12 +93,16 @@ Closed_account$closing_date = ifelse(Closed_account$last_open < Closed_account$l
 cl_retail = unique(Tab4ext$client)  %>%  .[!(. %in% insiders$client)] %>% 
   .[(. %in% acc_types$client[acc_types$attr_val=='Direct client'])]
 
+Sys.time() - time0
+
 save(insiders, file = 'insiders.rda' %>% paste0(datapath, .))
 save(persID, file = 'persID.rda' %>% paste0(datapath, .))
 save(acc_types, file = 'acc_types.rda' %>% paste0(datapath, .))
 save(Tab4ext, file = 'Tab4ext.rda' %>% paste0(datapath, .))
 save(Closed_account, file = 'Closed_account.rda' %>% paste0(datapath, .))
 save(cl_retail, file = 'cl_retail.rda' %>% paste0(datapath, .))
+
+Sys.time() - time0
 ```
 
 ```{r sty, include = F, eval = F, echo = F}
