@@ -27,9 +27,10 @@ Run jobs following the [instructions](https://scitas-data.epfl.ch/confluence/dis
 sbatch RegressionsR/HPCjobs/MinimumExample.run
 ```
 
-Push results (specified to be in the output folder)
+Move results from `scratch` to `output` folder and push
 
 ```sh
+mv /scratch/jxu/*.Rout output/
 git add .
 git commit -m "commit message"
 git push
