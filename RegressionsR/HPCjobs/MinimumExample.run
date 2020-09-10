@@ -1,0 +1,17 @@
+#!/bin/bash -l
+ 
+#SBATCH --nodes 1
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 2
+#SBATCH --mem 10G
+#SBATCH --time 00:30:00
+  
+echo STARTING at `date`
+ 
+module purge
+module load intel intel-mkl
+module load r curl
+srun R CMD BATCH /home/jxu/TradingBehavior/RegressionsR/HPCjobs/MinimumExample.run
+  
+echo FINISHED at `date`
+
