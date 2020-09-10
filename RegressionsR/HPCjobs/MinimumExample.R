@@ -1,3 +1,5 @@
+Sys.time()
+
 library(data.table)
 
 datapath = '../../data/'
