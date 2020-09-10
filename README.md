@@ -1,6 +1,6 @@
 # Trading Behavior
 
-This study series involve heavy computing for simulations and big data regressions that require High Performance Computing (HPC).
+This study series involves heavy computing for simulations and big data regressions that require High Performance Computing (HPC).
 
 
 ## Complete the code locally and push commits
