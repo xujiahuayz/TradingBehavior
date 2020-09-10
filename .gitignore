@@ -8,7 +8,6 @@
 .Rproj.user
 /.vscode/*
 /data/*
-/output/*
 **/venv/*
 */.idea/*
 **/.vscode/*
