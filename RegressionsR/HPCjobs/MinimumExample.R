@@ -1,4 +1,5 @@
 Sys.time()
+getwd()
 
 library(data.table)
 
