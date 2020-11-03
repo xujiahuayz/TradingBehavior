@@ -30,13 +30,18 @@ git pull
 Run jobs following the [instructions](https://scitas-data.epfl.ch/confluence/display/DOC/Using+the+clusters)
 
 ```sh
-sbatch RegressionsR/HPCjobs/MinimumExample.run
+sbatch RegressionsR/HPCjobs/rjob.run
 ```
 
 Check the status of your job
 
 ```sh
 squeue -u jxu
+```
+
+Watch the output file when the job is running
+```sh
+tail -f /scratch/jxu/LifetimeReg_job.Rout
 ```
 
 Move results from `scratch` to `output` folder and push
