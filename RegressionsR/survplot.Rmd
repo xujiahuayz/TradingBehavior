@@ -2244,7 +2244,7 @@ regtable = regtable[!(
 # if(!(exists('clientdaily2')|exists('clientdaily'))){
 #   load('clientdaily.rda')}
 
-load('masstbl.rda')
+load('masstbl.rda'%>% paste0(datapath, .))
 
 dates = seq.Date(from = min(masstbl$date_trans), to = max(masstbl$date_trans), by = 1)
 
@@ -2268,7 +2268,7 @@ trselscum = list()
 # 
 # save(temp0, file = 'temp0.rda')
 
-load('temp0.rda')
+load('temp0.rda'%>% paste0(datapath, .))
 
 # temp0 = temp0[firstobs >= '2009-01-01']
 # temp0[is.finite(raprofit365), wtage := 1/(.N), by = c('account_date', 'age')]

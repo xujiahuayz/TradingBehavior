@@ -40,7 +40,7 @@ options(stringsAsFactors = F,
 ```
 
 ```{r include = F, eval = T, echo = F}
-datapath = './data/'
+datapath = './../data/'
 mypar <- par(xpd = F)
 mypar$bty = 'l'
 mypar$mgp = c(1.5,0.5,0)
@@ -272,7 +272,6 @@ save(ExitTS1, ExitTS2, ExitTS3, file = 'ExitTSplot.rda' %>% paste0(datapath, .))
 
 ```  
 
-
 ```{r DailyExityoung, eval=F}
 load('regtable.rda' %>% paste0(datapath, .))
 load('cl_transferin.rda' %>% paste0(datapath, .))
@@ -330,7 +329,6 @@ for(j in 1:3){
 save(ExitTSyoung1, ExitTSyoung2, ExitTSyoung3, file = 'ExitTSplotyoung.rda' %>% paste0(datapath, .))
 
 ```
-
 
 ```{r ReturnbyAgeExit, eval=T}
 load('regtable.rda' %>% paste0(datapath, .))
@@ -585,11 +583,6 @@ save(trreturnquantile, file = 'trreturnquantile.rda' %>% paste0(datapath, .))
 ```
 
 ```{r eval=F}
-
-    
-    
-    
-    
     
 # when age is aligned, using plm/lm seems not make a difference 
 xx11 = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age < 365.2425*1.5,])
