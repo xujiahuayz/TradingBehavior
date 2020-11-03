@@ -1,6 +1,6 @@
 library(data.table)
 library(plm)
-filepath = '/home/jxu/learnr/'
+filepath = '/home/jxu/TradingBehavior/data/'
 # load(paste0(filepath,'regtable.rda'))
 # load(paste0(filepath,'cl_transferin.rda'))
 
