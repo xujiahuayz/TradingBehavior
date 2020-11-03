@@ -1,12 +1,11 @@
 library(data.table)
 library(plm)
+library(magrittr)
 
 getwd()
 
 filepath = '/home/jxu/TradingBehavior/data/'
 load(paste0(filepath,'regtable.rda'))
-# load(paste0(filepath,'cl_transferin.rda'))
-
 load(paste0(filepath,'tsregressreg.rda'))
 xx[, ':='(firstobs.y = NULL)]
 
@@ -25,7 +24,7 @@ pickage = c(2, 3.5, 5) * 364.2425 # pick an age
 
 trselsplm = list()
 ns = c()
-for (k in 1:length(pickage)){ # pick an age
+for (k in 1:length(pickage)){
   
   i = pickage[k]
   popu = regtable[lifetime >= i & firstobs >= '2009-01-01']$client
@@ -46,7 +45,11 @@ popu = regtable[lifetime >= 2 * 364.2425 & lifetime <= 5 * 364.2425 &
                   is.finite(closing_date) & firstobs >= '2009-01-01']$client
 temp = temp0[client %in% popu]
 
-trselsplm[[k+1]] = pdata.frame(temp[, c('client', 'account_date', 'age', 'retpr')], index=c('client', 'account_date'), row.names = F)
+trselsplm[[k+1]] = pdata.frame(
+  temp[, c('client', 'account_date', 'age', 'retpr')], 
+  index=c('client', 'account_date'), 
+  row.names = F
+  )
 
 gc()
 trsel = temp[age < 2 * 364.2425, c(n=.N,funcmeanconf(retpr)), by = age][order(age)]
