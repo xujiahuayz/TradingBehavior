@@ -1,0 +1,544 @@
+
+R version 3.6.0 (2019-04-26) -- "Planting of a Tree"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+During startup - Warning message:
+Setting LC_CTYPE failed, using "C" 
+> library(data.table)
+> library(plm)
+
+Attaching package: 'plm'
+
+The following object is masked from 'package:data.table':
+
+    between
+
+> library(magrittr)
+> library(stats)
+> 
+> getwd()
+[1] "/scratch/jxu"
+> 
+> funcmeanconf = function(series){
++   list(mret = mean(series, na.rm = T),
++        conf1 = t.test(series)$conf.int[1],
++        conf2 = t.test(series)$conf.int[2])
++ }
+> 
+> 
+> filepath = '/home/jxu/TradingBehavior/data/'
+> load(paste0(filepath,'regtable.rda'))
+> load(paste0(filepath,'tsregressreg.rda'))
+> xx[, ':='(firstobs.y = NULL)]
+> 
+> trselscum = list()
+> 
+> temp0 = xx[is.finite(rreturn365),
++                     list(
++                       client= client,
++                       account_date = account_date,
++                       ret =  rreturn365,
++                       age = age)][, ':='(
++                         retpr = ecdf(ret)(ret)), by = account_date]
+> 
+> 
+> pickage = c(2, 3.5, 5) * 364.2425 # pick an age
+> 
+> trselsplm = list()
+> ns = c()
+> for (k in 1:length(pickage)){
++   
++   i = pickage[k]
++   popu = regtable[lifetime >= i & firstobs >= '2009-01-01']$client
++   temp = temp0[age <= i & client %in% popu]
++   ns = c(ns, temp$client %>% unique() %>% length())
++   gc()
++   
++   trselsplm[[k]] = pdata.frame(temp[, c('client', 'account_date', 'age', 'retpr')], index=c('client', 'account_date'), row.names = F)
++   trsel = temp[, c(n=.N, funcmeanconf(retpr)), by = age][order(age)]
++   trselscum[[k]] = trsel
++   
++   print(k)
++ }
+[1] 1
+[1] 2
+[1] 3
+> 
+> 
+> #exited after two years and before 5
+> popu = regtable[lifetime >= 2 * 364.2425 & lifetime <= 5 * 364.2425 & 
++                   is.finite(closing_date) & firstobs >= '2009-01-01']$client
+> temp = temp0[client %in% popu]
+> 
+> trselsplm[[k+1]] = pdata.frame(
++   temp[, c('client', 'account_date', 'age', 'retpr')], 
++   index=c('client', 'account_date'), 
++   row.names = F
++   )
+> 
+> gc()
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells     654897    35.0   63543085  3393.6   62545815  3340.4
+Vcells 3018796733 23031.6 5532380061 42208.8 4979235293 37988.6
+> trsel = temp[age < 2 * 364.2425, c(n=.N,funcmeanconf(retpr)), by = age][order(age)]
+> trselscum[[k+1]] = trsel
+> ns = c(ns, temp$client %>% unique() %>% length())
+> 
+> 
+> time = Sys.time()
+> # when age is aligned, using plm/lm seems not make a difference 
+> xx11t = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age < 365.2425*1.5,], effect = 'individual')
+> xx11t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 234.55, df = 25598, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.3886193 0.3951692
+sample estimates:
+mean of x 
+0.3918942 
+
+> summary(xx11t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[1]][trselsplm[[1]]$age < 
+    365.2425 * 1.5, ], effect = "individual")
+
+Unbalanced Panel: n = 25599, T = 184-184, N = 4710216
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8728324 -0.0532055 -0.0012385  0.0519555  0.9023168 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 1.5071e-04 1.1049e-06   136.4 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    76303
+Residual Sum of Squares: 76001
+R-Squared:      0.0039558
+Adj. R-Squared: -0.0014871
+F-statistic: 18604.9 on 1 and 4684616 DF, p-value: < 2.22e-16
+> Sys.time() - time
+Time difference of 1.023127 mins
+> 
+> time = Sys.time()
+> xx21t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age < 365.2425*1.5,], effect = 'individual')
+> xx21t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 204.66, df = 19329, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.3880377 0.3955424
+sample estimates:
+mean of x 
+  0.39179 
+
+> summary(xx21t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[2]][trselsplm[[2]]$age < 
+    365.2425 * 1.5, ], effect = "individual")
+
+Unbalanced Panel: n = 19330, T = 184-184, N = 3556720
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8151328 -0.0531311 -0.0010308  0.0524254  0.8966636 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 1.6812e-04 1.2582e-06  133.62 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    56478
+Residual Sum of Squares: 56194
+R-Squared:      0.005022
+Adj. R-Squared: -0.00041506
+F-statistic: 17854.4 on 1 and 3537389 DF, p-value: < 2.22e-16
+> Sys.time() - time
+Time difference of 43.3243 secs
+> 
+> xx31t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age < 365.2425*1.5,], effect = 'individual')
+> xx31t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 172.57, df = 13771, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.3842019 0.3930303
+sample estimates:
+mean of x 
+0.3886161 
+
+> summary(xx31t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[3]][trselsplm[[3]]$age < 
+    365.2425 * 1.5, ], effect = "individual")
+
+Unbalanced Panel: n = 13772, T = 184-184, N = 2534048
+
+Residuals:
+       Min.     1st Qu.      Median     3rd Qu.        Max. 
+-0.81400608 -0.05441143 -0.00093212  0.05388580  0.84583813 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 1.8122e-04 1.4975e-06  121.01 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    40640
+Residual Sum of Squares: 40405
+R-Squared:      0.005777
+Adj. R-Squared: 0.00034412
+F-statistic: 14644.3 on 1 and 2520275 DF, p-value: < 2.22e-16
+> 
+> xx41t = plm(retpr~age, data = trselsplm[[4]][trselsplm[[4]]$age < 365.2425*1.5,], effect = 'individual')
+> xx41t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 72.09, df = 2546, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.3829205 0.4043344
+sample estimates:
+mean of x 
+0.3936274 
+
+> summary(xx41t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[4]][trselsplm[[4]]$age < 
+    365.2425 * 1.5, ], effect = "individual")
+
+Unbalanced Panel: n = 2547, T = 184-184, N = 468648
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.6885192 -0.0514636 -0.0011007  0.0494225  0.8093667 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 8.1639e-05 3.5492e-06  23.002 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    7771.8
+Residual Sum of Squares: 7763
+R-Squared:      0.0011339
+Adj. R-Squared: -0.0043244
+F-statistic: 529.1 on 1 and 466100 DF, p-value: < 2.22e-16
+> 
+> xx12t = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age >= 365.2425*1.5 & trselsplm[[1]]$age < 365.2425*2,], effect = 'individual')
+> xx12t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 269.76, df = 25598, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4509208 0.4575214
+sample estimates:
+mean of x 
+0.4542211 
+
+> summary(xx12t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[1]][trselsplm[[1]]$age >= 
+    365.2425 * 1.5 & trselsplm[[1]]$age < 365.2425 * 2, ], effect = "individual")
+
+Unbalanced Panel: n = 25599, T = 181-181, N = 4633419
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8276835 -0.0504997 -0.0012791  0.0479599  0.9194627 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 2.8403e-05 1.1063e-06  25.674 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    71346
+Residual Sum of Squares: 71336
+R-Squared:      0.00014303
+Adj. R-Squared: -0.0054117
+F-statistic: 659.151 on 1 and 4607819 DF, p-value: < 2.22e-16
+> 
+> xx22t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age >= 365.2425*1.5 & trselsplm[[2]]$age < 365.2425*2,], effect = 'individual')
+> xx22t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 240.65, df = 19329, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4583822 0.4659105
+sample estimates:
+mean of x 
+0.4621463 
+
+> summary(xx22t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[2]][trselsplm[[2]]$age >= 
+    365.2425 * 1.5 & trselsplm[[2]]$age < 365.2425 * 2, ], effect = "individual")
+
+Unbalanced Panel: n = 19330, T = 183-183, N = 3537390
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8287476 -0.0509639 -0.0011898  0.0484199  0.8885705 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 2.9753e-05 1.2363e-06  24.066 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    53091
+Residual Sum of Squares: 53082
+R-Squared:      0.0001646
+Adj. R-Squared: -0.005329
+F-statistic: 579.185 on 1 and 3518059 DF, p-value: < 2.22e-16
+> 
+> xx32t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*1.5 & trselsplm[[3]]$age < 365.2425*2,], effect = 'individual')
+> xx32t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 204.11, df = 13771, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4583336 0.4672221
+sample estimates:
+mean of x 
+0.4627778 
+
+> summary(xx32t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[3]][trselsplm[[3]]$age >= 
+    365.2425 * 1.5 & trselsplm[[3]]$age < 365.2425 * 2, ], effect = "individual")
+
+Unbalanced Panel: n = 13772, T = 183-183, N = 2520276
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8294391 -0.0506116 -0.0011645  0.0480967  0.8773092 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 3.7353e-05 1.4446e-06  25.857 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    36798
+Residual Sum of Squares: 36788
+R-Squared:      0.00026667
+Adj. R-Squared: -0.0052264
+F-statistic: 668.594 on 1 and 2506503 DF, p-value: < 2.22e-16
+> 
+> xx42t = plm(retpr~age, data = trselsplm[[4]][trselsplm[[4]]$age >= 365.2425*1.5 & trselsplm[[4]]$age < 365.2425*2,], effect = 'individual')
+> xx42t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 75.992, df = 2546, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4044076 0.4258311
+sample estimates:
+mean of x 
+0.4151193 
+
+> summary(xx42t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[4]][trselsplm[[4]]$age >= 
+    365.2425 * 1.5 & trselsplm[[4]]$age < 365.2425 * 2, ], effect = "individual")
+
+Unbalanced Panel: n = 2547, T = 182-183, N = 466100
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.7456522 -0.0483036 -0.0017786  0.0442979  0.8887622 
+
+Coefficients:
+      Estimate Std. Error t-value Pr(>|t|)    
+age 2.7624e-05 3.4141e-06  8.0912 5.92e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    7029.1
+Residual Sum of Squares: 7028.1
+R-Squared:      0.00014121
+Adj. R-Squared: -0.0053525
+F-statistic: 65.4682 on 1 and 463552 DF, p-value: 5.92e-16
+> 
+> xx23t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age >= 365.2425*2 & trselsplm[[2]]$age < 365.2425*3.5,], effect = 'individual')
+> xx23t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 290.17, df = 19329, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4612633 0.4675373
+sample estimates:
+mean of x 
+0.4644003 
+
+> summary(xx23t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[2]][trselsplm[[2]]$age >= 
+    365.2425 * 2 & trselsplm[[2]]$age < 365.2425 * 3.5, ], effect = "individual")
+
+Unbalanced Panel: n = 19330, T = 544-544, N = 10515520
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8882403 -0.1077080 -0.0084903  0.1022575  0.9437871 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 1.7022e-05 3.7285e-07  45.654 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    378480
+Residual Sum of Squares: 378410
+R-Squared:      0.00019854
+Adj. R-Squared: -0.0016427
+F-statistic: 2084.33 on 1 and 10496189 DF, p-value: < 2.22e-16
+> 
+> xx33t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*2 & trselsplm[[3]]$age < 365.2425*3.5,], effect = 'individual')
+> xx33t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 248.55, df = 13771, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4646816 0.4720692
+sample estimates:
+mean of x 
+0.4683754 
+
+> summary(xx33t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[3]][trselsplm[[3]]$age >= 
+    365.2425 * 2 & trselsplm[[3]]$age < 365.2425 * 3.5, ], effect = "individual")
+
+Unbalanced Panel: n = 13772, T = 548-548, N = 7547056
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8456129 -0.1063376 -0.0086089  0.1014074  0.9444792 
+
+Coefficients:
+      Estimate Std. Error t-value  Pr(>|t|)    
+age 1.8829e-05 4.3117e-07  43.669 < 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    264570
+Residual Sum of Squares: 264500
+R-Squared:      0.00025308
+Adj. R-Squared: -0.0015746
+F-statistic: 1907.02 on 1 and 7533283 DF, p-value: < 2.22e-16
+> 
+> xx34t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age >= 365.2425*3.5 & trselsplm[[3]]$age < 365.2425*5,], effect = 'individual')
+> xx34t %>% fixef %>% t.test
+
+	One Sample t-test
+
+data:  .
+t = 261.15, df = 13771, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.4934049 0.5008677
+sample estimates:
+mean of x 
+0.4971363 
+
+> summary(xx34t)
+Oneway (individual) effect Within Model
+
+Call:
+plm(formula = retpr ~ age, data = trselsplm[[3]][trselsplm[[3]]$age >= 
+    365.2425 * 3.5 & trselsplm[[3]]$age < 365.2425 * 5, ], effect = "individual")
+
+Unbalanced Panel: n = 13772, T = 543-543, N = 7478196
+
+Residuals:
+      Min.    1st Qu.     Median    3rd Qu.       Max. 
+-0.8614841 -0.1019469 -0.0045273  0.1004040  0.9166613 
+
+Coefficients:
+      Estimate Std. Error t-value Pr(>|t|)    
+age 2.8514e-06 4.4102e-07  6.4654 1.01e-10 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Total Sum of Squares:    266760
+Residual Sum of Squares: 266760
+R-Squared:      5.6001e-06
+Adj. R-Squared: -0.0018394
+F-statistic: 41.8018 on 1 and 7464423 DF, p-value: 1.0102e-10
+> 
+> 
+> proc.time()
+   user  system elapsed 
+943.174  55.879 925.714 
