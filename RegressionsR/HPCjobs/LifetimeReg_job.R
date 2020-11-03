@@ -1,8 +1,16 @@
 library(data.table)
 library(plm)
 library(magrittr)
+library(stats)
 
 getwd()
+
+funcmeanconf = function(series){
+  list(mret = mean(series, na.rm = T),
+       conf1 = t.test(series)$conf.int[1],
+       conf2 = t.test(series)$conf.int[2])
+}
+
 
 filepath = '/home/jxu/TradingBehavior/data/'
 load(paste0(filepath,'regtable.rda'))
@@ -57,15 +65,18 @@ trselscum[[k+1]] = trsel
 ns = c(ns, temp$client %>% unique() %>% length())
 
 
-
+time = Sys.time()
 # when age is aligned, using plm/lm seems not make a difference 
 xx11t = plm(retpr~age, data = trselsplm[[1]][trselsplm[[1]]$age < 365.2425*1.5,], effect = 'time')
 xx11t %>% fixef %>% t.test
 summary(xx11t)
+Sys.time() - time
 
+time = Sys.time()
 xx21t = plm(retpr~age, data = trselsplm[[2]][trselsplm[[2]]$age < 365.2425*1.5,], effect = 'time')
 xx21t %>% fixef %>% t.test
 summary(xx21t)
+Sys.time() - time
 
 xx31t = plm(retpr~age, data = trselsplm[[3]][trselsplm[[3]]$age < 365.2425*1.5,], effect = 'time')
 xx31t %>% fixef %>% t.test
