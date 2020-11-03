@@ -33,6 +33,12 @@ Run jobs following the [instructions](https://scitas-data.epfl.ch/confluence/dis
 sbatch RegressionsR/HPCjobs/MinimumExample.run
 ```
 
+Check the status of your job
+
+```sh
+squeue -u jxu
+```
+
 Move results from `scratch` to `output` folder and push
 
 ```sh
