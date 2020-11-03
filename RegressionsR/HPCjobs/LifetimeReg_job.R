@@ -1,7 +1,10 @@
 library(data.table)
 library(plm)
+
+getwd()
+
 filepath = '/home/jxu/TradingBehavior/data/'
-# load(paste0(filepath,'regtable.rda'))
+load(paste0(filepath,'regtable.rda'))
 # load(paste0(filepath,'cl_transferin.rda'))
 
 load(paste0(filepath,'tsregressreg.rda'))
