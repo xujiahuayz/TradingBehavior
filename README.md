@@ -14,6 +14,12 @@ git push
 
 ## Use [EPFL fidis](https://www.epfl.ch/research/facilities/scitas/hardware/fidis/) for HPC
 
+Log into fidis with SSH
+
+```sh
+ssh -X jxu@fidis.epfl.ch
+```
+
 Locate the current repository and pull commits
 
 ```sh
