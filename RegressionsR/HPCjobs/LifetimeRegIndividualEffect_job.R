@@ -25,7 +25,8 @@ temp0 = xx[is.finite(rreturn365),
                       account_date = account_date,
                       ret =  rreturn365,
                       age = age)][, ':='(
-                        retpr = ecdf(ret)(ret)), by = account_date]
+                        retpr = ecdf(ret)(ret) # rank of return
+                        ), by = account_date]
 
 
 pickage = c(2, 3.5, 5) * 364.2425 # pick an age
@@ -40,7 +41,11 @@ for (k in 1:length(pickage)){
   ns = c(ns, temp$client %>% unique() %>% length())
   gc()
   
-  trselsplm[[k]] = pdata.frame(temp[, c('client', 'account_date', 'age', 'retpr')], index=c('client', 'account_date'), row.names = F)
+  trselsplm[[k]] = pdata.frame(
+    temp[, c('client', 'account_date', 'age', 'retpr')], 
+    index=c('client', 'account_date'), 
+    row.names = F
+    )
   trsel = temp[, c(n=.N, funcmeanconf(retpr)), by = age][order(age)]
   trselscum[[k]] = trsel
   
