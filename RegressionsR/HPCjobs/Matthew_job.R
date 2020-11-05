@@ -17,16 +17,33 @@ load(paste0(filepath,'regtable.rda'))
 load(paste0(filepath,'tsregressreg.rda'))
 xx[, ':='(firstobs.y = NULL)]
 
-temp0 = xx[is.finite(rreturn365),
-                    list(
-                      client= client,
-                      account_date = account_date,
-                      ret =  rreturn365,
-                      age = age)][, ':='(
-                        retpr = ecdf(ret)(ret) # rank of return
-                        ), by = account_date]
-temp0 %>% head
-popu = temp0[, .N, by = client][N > 200]$client
+trselscum = list()
 
-gw <- pvcm(retpr ~ age, data = temp0[client %in% popu], index = c("client", "account_date"))
-cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2])
+temp0 = xx[is.finite(rreturn365),
+           list(
+             client= client,
+             account_date = account_date,
+             ret =  rreturn365,
+             age = age)][, ':='(
+               retpr = ecdf(ret)(ret) # rank of return
+             ), by = account_date]
+
+
+nbin = 4
+pickage = seq(0, length.out = nbin, by = 1.5) * 364.2425 # pick an age
+
+trselsplm = list()
+ns = c()
+for (k in 1:nbin){
+  popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01']$client
+  temp = temp0[age > pickage[k] & age <= pickage[k+1] & client %in% popu]
+  gw <- pvcm(retpr ~ age, data = temp, index = c("client", "account_date"))
+  cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2])
+  
+  print(k)
+}
+
+
+
+
+
