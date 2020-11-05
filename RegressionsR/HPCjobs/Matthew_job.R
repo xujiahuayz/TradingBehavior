@@ -36,9 +36,12 @@ trselsplm = list()
 ns = c()
 for (k in 1:nbin){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01']$client
+  
+  # select only observations where clients are between tha age bin
   temp = temp0[age > pickage[k] & age <= pickage[k+1] & client %in% popu]
+  
   gw <- pvcm(retpr ~ age, data = temp, index = c("client", "account_date"))
-  cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2])
+  cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
   
   print(k)
 }
