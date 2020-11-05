@@ -25,6 +25,8 @@ temp0 = xx[is.finite(rreturn365),
                       age = age)][, ':='(
                         retpr = ecdf(ret)(ret) # rank of return
                         ), by = account_date]
+temp0 %>% head
+temp0[, .N, by = client] %>% head
 
 gw <- pvcm(retpr ~ age, data = temp0, index = c("client", "account_date"))
 cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2])
