@@ -1,0 +1,120 @@
+
+R version 3.6.0 (2019-04-26) -- "Planting of a Tree"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+During startup - Warning message:
+Setting LC_CTYPE failed, using "C" 
+> library(data.table)
+> library(plm)
+
+Attaching package: 'plm'
+
+The following object is masked from 'package:data.table':
+
+    between
+
+> library(magrittr)
+> library(stats)
+> 
+> getwd()
+[1] "/scratch/jxu"
+> 
+> funcmeanconf = function(series){
++   list(mret = mean(series, na.rm = T),
++        conf1 = t.test(series)$conf.int[1],
++        conf2 = t.test(series)$conf.int[2])
++ }
+> 
+> 
+> filepath = '/home/jxu/TradingBehavior/data/'
+> load(paste0(filepath,'regtable.rda'))
+> load(paste0(filepath,'tsregressreg.rda'))
+> xx[, ':='(firstobs.y = NULL)]
+> 
+> trselscum = list()
+> 
+> temp0 = xx[is.finite(rreturn365),
++            list(
++              client= client,
++              account_date = account_date,
++              ret =  rreturn365,
++              age = age)][, ':='(
++                retpr = ecdf(ret)(ret) # rank of return
++              ), by = account_date]
+> 
+> 
+> nbin = 4
+> pickage = seq(0, length.out = nbin, by = 1.5) * 364.2425 # pick an age
+> 
+> trselsplm = list()
+> ns = c()
+> for (k in 1:nbin){
++   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01']$client
++   
++   # select only observations where clients are between tha age bin
++   temp = temp0[age > pickage[k] & age <= pickage[k+1] & client %in% popu]
++   
++   gw <- pvcm(retpr ~ age, data = temp, index = c("client", "account_date"))
++   cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
++   
++   print(k)
++ }
+
+	Pearson's product-moment correlation
+
+data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
+t = -488.71, df = 27972, p-value < 2.2e-16
+alternative hypothesis: true correlation is not equal to 0
+95 percent confidence interval:
+ -0.9473452 -0.9448878
+sample estimates:
+       cor 
+-0.9461301 
+
+[1] 1
+
+	Pearson's product-moment correlation
+
+data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
+t = -459.2, df = 21346, p-value < 2.2e-16
+alternative hypothesis: true correlation is not equal to 0
+95 percent confidence interval:
+ -0.9541475 -0.9516808
+sample estimates:
+       cor 
+-0.9529299 
+
+[1] 2
+
+	Pearson's product-moment correlation
+
+data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
+t = -656.49, df = 15494, p-value < 2.2e-16
+alternative hypothesis: true correlation is not equal to 0
+95 percent confidence interval:
+ -0.9830331 -0.9819400
+sample estimates:
+      cor 
+-0.982495 
+
+[1] 3
+Error in attr(x, "index") <- index : attempt to set an attribute on NULL
+Calls: pvcm -> pvcm.within -> add_pseries_features
+Execution halted
