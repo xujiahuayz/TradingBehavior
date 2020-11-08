@@ -39,7 +39,7 @@ ns = c()
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
-  popu[, ':='(cohort = floor(lifetime/7))] # cohorting in lifetime in weeks
+  popu[, ':='(cohort = floor(lifetime/7), client = as.integer(client))] # cohorting in lifetime in weeks
   
   # select only observations where clients are between that age bin
   temp = merge(temp0[age > pickage[k] & age <= pickage[k+1]], popu['cohort', 'client'], by = 'client')
