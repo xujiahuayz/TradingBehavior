@@ -37,13 +37,15 @@ pickage = c(1, 1.5, 2, 3.5, 5) * 364.2425
 trselsplm = list()
 ns = c()
 for (k in 1:(length(pickage)-1)){
-  popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01']$client
+  popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
+  
+  popu[, ':='(cohort = floor(lifetime/7))] # cohorting in lifetime in weeks
   
   # select only observations where clients are between that age bin
-  temp = temp0[age > pickage[k] & age <= pickage[k+1] & client %in% popu]
+  temp = merge(temp0[age > pickage[k] & age <= pickage[k+1]], popu['cohort', 'client'], by = 'client')
   temp %>% head %>% print
   
-  gw <- pvcm(retpr ~ I(age - pickage[k]), data = temp, index = c("client", "account_date"))
+  gw <- pvcm(retpr ~ I(age - pickage[k]), data = temp, index = c("cohort", "account_date"))
   gw[['coefficients']] %>% head %>% print
   gw[['coefficients']] %>% summary %>% print
   
