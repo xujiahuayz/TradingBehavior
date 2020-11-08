@@ -31,24 +31,24 @@ temp0 = xx[is.finite(rreturn365),
 
 # nbin = 4
 # pickage = seq(0, length.out = nbin, by = 1.5) * 364.2425 # pick an age
-pickage = c(0, 1.5, 2, 3.5, 5) * 364.2425
+pickage = c(1, 1.5, 2, 3.5, 5) * 364.2425
 
 trselsplm = list()
 ns = c()
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01']$client
   
-  # select only observations where clients are between tha age bin
+  # select only observations where clients are between that age bin
   temp = temp0[age > pickage[k] & age <= pickage[k+1] & client %in% popu]
   temp %>% head %>% print
   
-  gw <- pvcm(retpr ~ age, data = temp, index = c("client", "account_date"))
+  gw <- pvcm(retpr ~ I(age - pickage[k]), data = temp, index = c("client", "account_date"))
   gw[['coefficients']] %>% head %>% print
   gw[['coefficients']] %>% summary %>% print
   
   cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
   
-  print(k)
+  print(k %>% paste0('====================================================='))
 }
 
 
