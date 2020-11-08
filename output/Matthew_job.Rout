@@ -62,59 +62,59 @@ The following object is masked from 'package:data.table':
 > 
 > # nbin = 4
 > # pickage = seq(0, length.out = nbin, by = 1.5) * 364.2425 # pick an age
-> pickage = c(0, 1.5, 2, 3.5, 5) * 364.2425
+> pickage = c(1, 1.5, 2, 3.5, 5) * 364.2425
 > 
 > trselsplm = list()
 > ns = c()
 > for (k in 1:(length(pickage)-1)){
 +   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01']$client
 +   
-+   # select only observations where clients are between tha age bin
++   # select only observations where clients are between that age bin
 +   temp = temp0[age > pickage[k] & age <= pickage[k+1] & client %in% popu]
 +   temp %>% head %>% print
 +   
-+   gw <- pvcm(retpr ~ age, data = temp, index = c("client", "account_date"))
++   gw <- pvcm(retpr ~ I(age - pickage[k]), data = temp, index = c("client", "account_date"))
 +   gw[['coefficients']] %>% head %>% print
 +   gw[['coefficients']] %>% summary %>% print
 +   
 +   cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
 +   
-+   print(k)
++   print(k %>% paste0('====================================================='))
 + }
    client account_date      ret      age     retpr
-1: 205779   2010-03-29 2.957284 364 days 0.9998452
-2: 205779   2010-03-30 2.960289 365 days 0.9998454
-3: 205779   2010-03-31 2.977777 366 days 0.9998456
-4: 205779   2010-04-01 2.983413 367 days 0.9998458
-5: 205779   2010-04-02 2.987014 368 days 0.9998459
-6: 205779   2010-04-03 2.987014 369 days 0.9998459
-       (Intercept)           age
-205779   1.0000443 -4.751343e-07
-206158  -0.8055108  3.099305e-03
-206452   0.6064001 -9.790963e-05
-207096  -0.5177821  2.627225e-03
-207200   0.9913437  1.086596e-05
-208110   1.0056434 -2.390193e-05
-  (Intercept)            age            
- Min.   :-3.18015   Min.   :-7.615e-03  
- 1st Qu.:-0.04938   1st Qu.:-6.066e-04  
- Median : 0.30928   Median : 6.861e-05  
- Mean   : 0.39125   Mean   : 1.473e-04  
- 3rd Qu.: 0.88726   3rd Qu.: 9.737e-04  
- Max.   : 4.05969   Max.   : 8.021e-03  
+1: 205779   2010-03-30 2.960289 365 days 0.9998454
+2: 205779   2010-03-31 2.977777 366 days 0.9998456
+3: 205779   2010-04-01 2.983413 367 days 0.9998458
+4: 205779   2010-04-02 2.987014 368 days 0.9998459
+5: 205779   2010-04-03 2.987014 369 days 0.9998459
+6: 205779   2010-04-04 2.987014 370 days 0.9998459
+       (Intercept) I(age - pickage[k])
+205779   0.9998719       -4.798997e-07
+206158   0.3219251        3.111351e-03
+206452   0.5738617       -1.236421e-04
+207096   0.4377135        2.639177e-03
+207200   0.9952860        1.099398e-05
+208110   0.9969614       -2.410033e-05
+  (Intercept)      I(age - pickage[k]) 
+ Min.   :-0.2892   Min.   :-7.669e-03  
+ 1st Qu.: 0.1742   1st Qu.:-6.089e-04  
+ Median : 0.4152   Median : 6.816e-05  
+ Mean   : 0.4451   Mean   : 1.458e-04  
+ 3rd Qu.: 0.6958   3rd Qu.: 9.743e-04  
+ Max.   : 1.3076   Max.   : 8.069e-03  
 
 	Pearson's product-moment correlation
 
 data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
-t = -488.71, df = 27972, p-value < 2.2e-16
+t = -97.325, df = 27972, p-value < 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- -0.9473452 -0.9448878
+ -0.5116601 -0.4941512
 sample estimates:
        cor 
--0.9461301 
+-0.5029572 
 
-[1] 1
+[1] "1====================================================="
    client account_date      ret      age     retpr
 1: 205779   2010-09-28 2.060746 547 days 0.9996875
 2: 205779   2010-09-29 2.068909 548 days 0.9996877
@@ -122,33 +122,33 @@ sample estimates:
 4: 205779   2010-10-01 2.057731 550 days 0.9996881
 5: 205779   2010-10-02 2.018783 551 days 0.9996881
 6: 205779   2010-10-03 2.018783 552 days 0.9996881
-       (Intercept)           age
-205779  1.00113665 -2.671293e-06
-206158 -0.08969707  1.443408e-03
-206452 -0.35292199  1.456936e-03
-207096  0.39430015  8.448800e-04
-207200  2.34821919 -2.247763e-03
-208110  3.92247309 -5.196124e-03
-  (Intercept)            age            
- Min.   :-4.56014   Min.   :-7.491e-03  
- 1st Qu.:-0.08614   1st Qu.:-7.124e-04  
- Median : 0.37799   Median : 4.837e-06  
- Mean   : 0.45426   Mean   : 2.835e-05  
- 3rd Qu.: 1.03391   3rd Qu.: 7.836e-04  
- Max.   : 5.27608   Max.   : 7.952e-03  
+       (Intercept) I(age - pickage[k])
+205779   0.9996771       -2.671293e-06
+206158   0.6989288        1.443408e-03
+206452   0.4430948        1.456936e-03
+207096   0.8559119        8.448800e-04
+207200   1.1201228       -2.247763e-03
+208110   1.0834993       -5.196124e-03
+  (Intercept)      I(age - pickage[k]) 
+ Min.   :-0.2941   Min.   :-7.491e-03  
+ 1st Qu.: 0.2021   1st Qu.:-7.124e-04  
+ Median : 0.4561   Median : 4.837e-06  
+ Mean   : 0.4697   Mean   : 2.835e-05  
+ 3rd Qu.: 0.7251   3rd Qu.: 7.836e-04  
+ Max.   : 1.2988   Max.   : 7.952e-03  
 
 	Pearson's product-moment correlation
 
 data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
-t = -647.04, df = 25597, p-value < 2.2e-16
+t = -91.868, df = 25597, p-value < 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- -0.9714612 -0.9700493
+ -0.5071103 -0.4886844
 sample estimates:
        cor 
--0.9707636 
+-0.4979535 
 
-[1] 2
+[1] "2====================================================="
    client account_date      ret      age     retpr
 1: 205779   2011-03-29 1.476253 729 days 0.9991975
 2: 205779   2011-03-30 1.482647 730 days 0.9991656
@@ -156,33 +156,33 @@ sample estimates:
 4: 205779   2011-04-01 1.466900 732 days 0.9991660
 5: 205779   2011-04-02 1.463299 733 days 0.9991659
 6: 205779   2011-04-03 1.463299 734 days 0.9991659
-       (Intercept)           age
-205779   0.9961853  2.431957e-06
-206158   0.8358940  5.686266e-05
-206452   1.7875947 -1.066504e-03
-207096   1.6456939 -8.677905e-04
-207200  -0.1221292  2.843827e-04
-329252   1.0293489 -7.018882e-04
-  (Intercept)            age            
- Min.   :-2.21638   Min.   :-2.650e-03  
- 1st Qu.:-0.08194   1st Qu.:-5.204e-04  
- Median : 0.42992   Median : 4.849e-06  
- Mean   : 0.46465   Mean   : 1.679e-05  
- 3rd Qu.: 1.05937   3rd Qu.: 5.310e-04  
- Max.   : 3.20070   Max.   : 2.680e-03  
+       (Intercept) I(age - pickage[k])
+205779  0.99795696        2.431957e-06
+206158  0.87731761        5.686266e-05
+206452  1.01066239       -1.066504e-03
+207096  1.01352151       -8.677905e-04
+207200  0.08503929        2.843827e-04
+329252  0.51803383       -7.018882e-04
+  (Intercept)      I(age - pickage[k]) 
+ Min.   :-0.3149   Min.   :-2.650e-03  
+ 1st Qu.: 0.2199   1st Qu.:-5.204e-04  
+ Median : 0.4717   Median : 4.849e-06  
+ Mean   : 0.4769   Mean   : 1.679e-05  
+ 3rd Qu.: 0.7294   3rd Qu.: 5.310e-04  
+ Max.   : 1.3088   Max.   : 2.680e-03  
 
 	Pearson's product-moment correlation
 
 data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
-t = -535.07, df = 19328, p-value < 2.2e-16
+t = -145.47, df = 19328, p-value < 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- -0.9687434 -0.9669601
+ -0.7295945 -0.7161339
 sample estimates:
        cor 
--0.9678639 
+-0.7229328 
 
-[1] 3
+[1] "3====================================================="
    client account_date      ret       age     retpr
 1: 205779   2012-09-25 1.262042 1275 days 0.9990542
 2: 205779   2012-09-26 1.256662 1276 days 0.9991101
@@ -190,33 +190,33 @@ sample estimates:
 4: 205779   2012-09-28 1.251839 1278 days 0.9991107
 5: 205779   2012-09-29 1.251017 1279 days 0.9991106
 6: 205779   2012-09-30 1.251017 1280 days 0.9991104
-       (Intercept)           age
-205779  1.00836949 -6.783115e-06
-206158  2.31902952 -1.205904e-03
-206452 -1.02137947  9.469313e-04
-207096 -0.03787702  3.290475e-04
-207200 -0.94498280  7.678962e-04
-336804 -0.01249142  2.483654e-04
-  (Intercept)           age            
- Min.   :-3.6937   Min.   :-2.669e-03  
- 1st Qu.:-0.2637   1st Qu.:-4.886e-04  
- Median : 0.4697   Median :-6.213e-06  
- Mean   : 0.4968   Mean   : 3.040e-06  
- 3rd Qu.: 1.3168   3rd Qu.: 4.757e-04  
- Max.   : 4.6520   Max.   : 2.668e-03  
+       (Intercept) I(age - pickage[k])
+205779  0.99972205       -6.783115e-06
+206158  0.78168397       -1.205904e-03
+206452  0.18581475        9.469313e-04
+207096  0.38160883        3.290475e-04
+207200  0.03396873        7.678962e-04
+336804  0.30413685        2.483654e-04
+  (Intercept)      I(age - pickage[k]) 
+ Min.   :-0.3259   Min.   :-2.669e-03  
+ 1st Qu.: 0.2555   1st Qu.:-4.886e-04  
+ Median : 0.5010   Median :-6.213e-06  
+ Mean   : 0.5007   Mean   : 3.040e-06  
+ 3rd Qu.: 0.7551   3rd Qu.: 4.757e-04  
+ Max.   : 1.3124   Max.   : 2.668e-03  
 
 	Pearson's product-moment correlation
 
 data:  gw[["coefficients"]][, 1] and gw[["coefficients"]][, 2]
-t = -688.92, df = 13770, p-value < 2.2e-16
+t = -122.05, df = 13770, p-value < 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- -0.9862649 -0.9853229
+ -0.7287964 -0.7127490
 sample estimates:
        cor 
--0.9858017 
+-0.7208693 
 
-[1] 4
+[1] "4====================================================="
 > 
 > 
 > 
@@ -225,4 +225,4 @@ sample estimates:
 > 
 > proc.time()
     user   system  elapsed 
-2289.425  157.894 2402.616 
+2021.166  115.034 2089.981 
