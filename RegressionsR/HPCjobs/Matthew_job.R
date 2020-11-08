@@ -25,7 +25,8 @@ temp0 = xx[is.finite(rreturn365),
              account_date = account_date,
              ret =  rreturn365,
              age = age)][, ':='(
-               retpr = ecdf(ret)(ret) # rank of return
+               # retpr_rank = ecdf(ret)(ret), # rank of return
+               retpr = scale(ret)
              ), by = account_date]
 
 
