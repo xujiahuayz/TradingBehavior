@@ -44,7 +44,7 @@ print(0 %>% paste0('====================================================='))
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
-  popu[, ':='(cohort = floor(as.numeric(lifetime/182.62125)))] # cohorting in lifetime in months
+  popu[, ':='(cohort = floor(as.numeric(lifetime/91.310625)))] # cohorting in lifetime in months
   
   # select only observations where clients are between that age bin
   temp = merge(
@@ -54,7 +54,7 @@ for (k in 1:(length(pickage)-1)){
       account_date = mean(account_date, na.rm = T),
       n = length(retpr)
       #have to do a synthetic group, otherwise `pvcm` does not run
-      ), by = c('cohort', 'age')][n > 100]
+      ), by = c('cohort', 'age')][n > 30]
   
   temp %>% head %>% print
   
