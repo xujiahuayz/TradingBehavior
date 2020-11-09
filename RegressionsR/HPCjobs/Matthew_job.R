@@ -11,8 +11,10 @@ funcmeanconf = function(series){
        conf2 = t.test(series)$conf.int[2])
 }
 
+filerootpath = '/home/jxu/TradingBehavior/'
+filerootpath = '../'
+filepath = paste0(filerootpath, 'data/')
 
-filepath = '/home/jxu/TradingBehavior/data/'
 load(paste0(filepath,'regtable.rda'))
 load(paste0(filepath,'tsregressreg.rda'))
 xx[, ':='(firstobs.y = NULL)]
@@ -31,22 +33,26 @@ temp0 = xx[is.finite(rreturn365),
 
 
 # nbin = 4
-# pickage = seq(0, length.out = nbin, by = 1.5) * 364.2425 # pick an age
-pickage = c(1, 1.5, 2, 3.5, 5) * 364.2425
+# pickage = seq(0, length.out = nbin, by = 1.5) * 365.2425 # pick an age
+pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
 
 trselsplm = list()
 ns = c()
+print(0 %>% paste0('====================================================='))
+
+
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
-  popu[, ':='(cohort = floor(lifetime/7))] # cohorting in lifetime in weeks
+  popu[, ':='(cohort = floor(lifetime/30.436875))] # cohorting in lifetime in months
   
   # select only observations where clients are between that age bin
   temp = merge(
     temp0[age > pickage[k] & age <= pickage[k+1]], popu[, c('cohort', 'client')], by = 'client'
     )[ , list(
       retpr = mean(retpr, na.rm = T),
-      account_date = mean(account_date, na.rm = T) #have to do a synthetic group, otherwise pvcm does not run
+      account_date = mean(account_date, na.rm = T) 
+      #have to do a synthetic group, otherwise `pvcm` does not run
       ), by = c('cohort', 'age')]
   
   temp %>% head %>% print
