@@ -12,7 +12,7 @@ funcmeanconf = function(series){
 }
 
 filerootpath = '/home/jxu/TradingBehavior/'
-filerootpath = '../'
+# filerootpath = '../'
 filepath = paste0(filerootpath, 'data/')
 
 load(paste0(filepath,'regtable.rda'))
@@ -44,7 +44,7 @@ print(0 %>% paste0('====================================================='))
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
-  popu[, ':='(cohort = floor(lifetime/30.436875))] # cohorting in lifetime in months
+  popu[, ':='(cohort = floor(as.numeric(lifetime/30.436875)))] # cohorting in lifetime in months
   
   # select only observations where clients are between that age bin
   temp = merge(
