@@ -42,8 +42,15 @@ for (k in 1:(length(pickage)-1)){
   popu[, ':='(cohort = floor(lifetime/7))] # cohorting in lifetime in weeks
   
   # select only observations where clients are between that age bin
-  temp = merge(temp0[age > pickage[k] & age <= pickage[k+1]], popu[, c('cohort', 'client')], by = 'client')
+  temp = merge(
+    temp0[age > pickage[k] & age <= pickage[k+1]], popu[, c('cohort', 'client')], by = 'client'
+    )[ , list(
+      retpr = mean(retpr, na.rm = T),
+      account_date = mean(account_date, na.rm = T) #have to do a synthetic group, otherwise pvcm does not run
+      ), by = c('cohort', 'age')]
+  
   temp %>% head %>% print
+  
   
   gw <- pvcm(retpr ~ I(age - pickage[k]), data = temp, index = c("cohort", "account_date"))
   gw[['coefficients']] %>% head %>% print
