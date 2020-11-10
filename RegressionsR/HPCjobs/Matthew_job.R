@@ -34,7 +34,7 @@ temp0 = xx[is.finite(rreturn365),
 
 # nbin = 4
 # pickage = seq(0, length.out = nbin, by = 1.5) * 365.2425 # pick an age
-pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
+pickage = c(1, 2, 5) * 365.2425
 
 trselsplm = list()
 ns = c()
@@ -44,7 +44,7 @@ print(0 %>% paste0('====================================================='))
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
-  popu[, ':='(cohort = floor(as.numeric(lifetime/91.310625)))] # cohorting in lifetime in months
+  popu[, ':='(cohort = floor(as.numeric(lifetime/182.62125)))] # cohorting in lifetime in half year
   
   # select only observations where clients are between that age bin
   temp = merge(
