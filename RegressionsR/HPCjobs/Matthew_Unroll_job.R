@@ -44,7 +44,7 @@ print(0 %>% paste0('====================================================='))
 for (k in 1:(length(pickage)-1)){
   popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
-  popu[, ':='(cohort = floor(as.numeric(lifetime/(182.62125/6))))] # cohorting in lifetime in half year
+  popu[, ':='(cohort = floor(as.numeric(lifetime/182.62125)))] # cohorting in lifetime in half year
   
   # select only observations where clients are between that age bin
   temp = merge(
@@ -54,18 +54,16 @@ for (k in 1:(length(pickage)-1)){
       account_date = mean(account_date, na.rm = T),
       n = length(retpr)
       #have to do a synthetic group, otherwise `pvcm` does not run
-      ), by = c('cohort', 'age')][n > 200]
+      ), by = c('cohort', 'age')][n > 30]
   
   temp %>% head %>% print
   
   
   gw <- pvcm(retpr ~ I(age - pickage[k]), data = temp, index = c("cohort", "account_date"))
-  gw[['coefficients']] %>% print
+  gw[['coefficients']] %>% head %>% print
   gw[['coefficients']] %>% summary %>% print
   
   cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
-  cor.test(gw[['coefficients']][,1], gw[['coefficients']] %>% row.names() %>% as.numeric()) %>% print
-  cor.test(gw[['coefficients']] %>% row.names() %>% as.numeric(), gw[['coefficients']][,2]) %>% print
   
   print(k %>% paste0('====================================================='))
 }
