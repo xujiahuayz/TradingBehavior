@@ -60,11 +60,10 @@ for (k in 1:(length(pickage)-1)){
   temp = merge(
     temp0[age > pickage[k] & age <= pickage[k+1]], popu[, c('lifetime', 'client')], by = 'client'
   )
-  
+  temp[, agediff := as.numeric(age - pickage[k])]
   temp %>% head %>% print
   
-  
-  gw <- lm(retpr ~ lifetime + I(age - pickage[k]) + I(lifetime *(age - pickage[k])) , data = temp
+  gw <- lm(retpr ~ lifetime + agediff + I(lifetime * agediff) , data = temp
            # , index = c("cohort", "account_date")
            )
   gw[['coefficients']] %>% print
