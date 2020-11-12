@@ -67,7 +67,7 @@ for (k in 1:(length(pickage)-1)){
            # , index = c("cohort", "account_date")
            )
   # gw[['coefficients']] %>% print
-  gw[['coefficients']] %>% summary %>% print
+  gw %>% summary %>% print
   # 
   # cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
   # cor.test(gw[['coefficients']][,1], gw[['coefficients']] %>% row.names() %>% as.numeric()) %>% print
