@@ -36,7 +36,7 @@ temp0 = xx[is.finite(rreturn365),
 # pickage = seq(0, length.out = nbin, by = 1.5) * 365.2425 # pick an age
 # pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
 
-pickage = c(1, 1.5, 2, 3, 4) * 365.2425
+pickage = c(1, 1.5, 3, 5) * 365.2425
 
 trselsplm = list()
 ns = c()
