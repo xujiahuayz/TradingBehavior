@@ -36,7 +36,7 @@ temp0 = xx[is.finite(rreturn365),
 # pickage = seq(0, length.out = nbin, by = 1.5) * 365.2425 # pick an age
 # pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
 
-pickage = c(1, 1.5, 3, 5) * 365.2425
+pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
 
 trselsplm = list()
 ns = c()
@@ -69,8 +69,8 @@ for (k in 1:(length(pickage)-1)){
 
   temp %>% head %>% print
   
-  gw <- lm(retpr ~ lifediff + agediff + I(lifediff * agediff) , data = temp
-           # , index = c("cohort", "account_date")
+  gw <- plm(retpr ~ lifediff + agediff + I(lifediff * agediff) , data = temp
+            , effect = 'individual', index = c("client", "account_date")
            )
   # gw[['coefficients']] %>% print
   gw %>% summary %>% print
