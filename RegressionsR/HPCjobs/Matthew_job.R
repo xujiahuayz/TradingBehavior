@@ -27,8 +27,8 @@ temp0 = xx[is.finite(rreturn365),
              account_date = account_date,
              ret =  rreturn365,
              age = age)][, ':='(
-               retpr = ecdf(ret)(ret) # rank of return
-               # retpr = scale(ret) %>% as.numeric()
+               # retpr = ecdf(ret)(ret) # rank of return
+               retpr = scale(ret) %>% as.numeric()
              ), by = account_date]
 
 
@@ -66,8 +66,8 @@ for (k in 1:(length(pickage)-1)){
   gw <- lm(retpr ~ lifetime + agediff + I(lifetime * agediff) , data = temp
            # , index = c("cohort", "account_date")
            )
-  gw[['coefficients']] %>% print
-  # gw[['coefficients']] %>% summary %>% print
+  # gw[['coefficients']] %>% print
+  gw[['coefficients']] %>% summary %>% print
   # 
   # cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
   # cor.test(gw[['coefficients']][,1], gw[['coefficients']] %>% row.names() %>% as.numeric()) %>% print
