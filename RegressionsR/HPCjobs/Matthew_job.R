@@ -34,8 +34,7 @@ temp0 = xx[is.finite(rreturn365),
 
 # nbin = 4
 # pickage = seq(0, length.out = nbin, by = 1.5) * 365.2425 # pick an age
-# pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
-pickage = c(1, 2, 4, 6) * 365.2425
+pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
 
 trselsplm = list()
 ns = c()
@@ -60,10 +59,15 @@ for (k in 1:(length(pickage)-1)){
   temp = merge(
     temp0[age > pickage[k] & age <= pickage[k+1]], popu[, c('lifetime', 'client')], by = 'client'
   )
-  temp[, agediff := as.numeric(age - pickage[k])]
+  
+  temp[ , ':='(
+    agediff = as.numeric(age - pickage[k]),
+    lifediff = as.numeric(lifetime - pickage[k+1])
+    )]
+
   temp %>% head %>% print
   
-  gw <- lm(retpr ~ lifetime + agediff + I(lifetime * agediff) , data = temp
+  gw <- lm(retpr ~ lifediff + agediff + I(lifediff * agediff) , data = temp
            # , index = c("cohort", "account_date")
            )
   # gw[['coefficients']] %>% print
