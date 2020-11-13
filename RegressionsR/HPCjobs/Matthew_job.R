@@ -78,7 +78,8 @@ for (k in 1:(length(pickage)-1)){
   # cor.test(gw[['coefficients']][,1], gw[['coefficients']][,2]) %>% print
   # cor.test(gw[['coefficients']][,1], gw[['coefficients']] %>% row.names() %>% as.numeric()) %>% print
   # cor.test(gw[['coefficients']] %>% row.names() %>% as.numeric(), gw[['coefficients']][,2]) %>% print
-  # 
+  #
+  gc() 
   print(k %>% paste0('====================================================='))
 }
 
