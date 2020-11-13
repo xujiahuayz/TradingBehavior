@@ -1,0 +1,4 @@
+\beamer@sectionintoc {1}{Two quick surveys}{2}{0}{1}
+\beamer@sectionintoc {2}{Research motivation and background}{5}{0}{2}
+\beamer@sectionintoc {3}{Data and Methodology}{9}{0}{3}
+\beamer@sectionintoc {4}{Empirical results}{28}{0}{4}

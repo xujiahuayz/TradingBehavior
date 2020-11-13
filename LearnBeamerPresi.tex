@@ -109,14 +109,13 @@
 %	TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title[Short title]{Learning (not) to trade} % The short title appears at the bottom of every slide, the full title is only on the title page
+\title[Short title]{Learning (not) to trade: Lindy's law in retail traders} % The short title appears at the bottom of every slide, the full title is only on the title page
 
-\author{Teodor Godina \and Serge Kassibrakis \and Semyon Malamud
-	\\
-	Alberto Teguia \and Jiahua (Java) Xu} % Your name
+\author{Teodor Godina \and Serge Kassibrakis \and Semyon Malamud \and Alberto Teguia \and Jiahua (Java) Xu} % Your name
 \institute[EPFL]
 {
-Swissquote, EPFL, SFI, UBC \\ % Your institution for the title page
+	Teodor Godina \and Serge Kassibrakis \and Semyon Malamud \and Alberto Teguia \and Jiahua (Java) Xu
+%Swissquote, EPFL, SFI, UBC, UCL \\ % Your institution for the title page
 \medskip
 }
 \date{\today} % Date, can be changed to a custom date
@@ -177,26 +176,31 @@ Other things equal, you'd be more likely to exit, if you:
 \begin{frame}{Exit procrastination---Lindy's law?}
 
 	\begin{figure}
-	\includegraphics[width=0.85\linewidth,trim={10 30 0 0},clip]{figures/exitTS-3}
-	\caption{At a given return level (highest tertile), higher trading age is associated with lower exit rate}
+	\includegraphics[height=0.231\linewidth,trim={10 30 18 0},clip]{figures/exitTS-1}
+	\includegraphics[height=0.231\linewidth,trim={49 30 18 0},clip]{figures/exitTS-2}
+	\includegraphics[height=0.231\linewidth,trim={49 30 18 0},clip]{figures/exitTS-3}
+	\caption{At any given return level (left to right: lowest to highest tertile), higher trading age is associated with lower exit rate}
 	\end{figure}
 
 \end{frame}
 
 
-\begin{frame}{Why is it relevant?}
+\begin{frame}{Purpose of the study}
 
-	\begin{enumerate}
-		\item{Trading platforms}
-		\begin{itemize}
-			\item should focus on retaining inexperienced traders
-		\end{itemize}
 
-		\item{Investors}
-		\begin{itemize}
-			\item should understand their trading inertia might not be economically rational
-		\end{itemize}
-	\end{enumerate}
+To model trading inertia, a.k.a Lindy's law, in retail traders.
+
+%	\begin{enumerate}
+%		\item{Trading platforms}
+%		\begin{itemize}
+%			\item should focus on retaining inexperienced traders
+%		\end{itemize}
+%
+%		\item{Investors}
+%		\begin{itemize}
+%			\item should understand their trading inertia might not be economically rational
+%		\end{itemize}
+%	\end{enumerate}
 
 
 \end{frame}
@@ -208,7 +212,7 @@ Other things equal, you'd be more likely to exit, if you:
 		\item \cite{Seru2010}: two learning routes of investors---the first type improves over time by learning from their trading experience, while the second type realizes their ability is insufficient and ceases to trade.
 		\item \cite{Nicolosi2009}: investors benefit from trading experience and can learn to place more profitable trades.
 		\item \cite{Gervais2001}: traders develop assessments of their own trading ability through experience.
-		\item \cite{Schraeder2015}: young investors trade frequently but obtain lower returns.
+		\item \cite{Schraeder2016}: young investors trade frequently but obtain lower returns.
 
 		%		Also relevant for our study is the literature on the trading behavior of different investor cohorts.  \cite{Grinblatt2001} show that domestic and less sophisticated investors tend to be reversal traders, whereas foreign and more sophisticated investors tend to be trend followers. \cite{Dorn2005} investigate the relationship between investor behaviors and objective attributes such age, gender and income, as well as subjective attributes such as self-reported risk attitude. They find that investors with high risk tolerance and who believe themselves to be more knowledgeable than the average trade more aggressively. \cite{Kourtidis2011} find that wealthy and educated individuals are associated with higher risk tolerance and more frequent trading.
 		%
@@ -563,7 +567,7 @@ child { node [env] {
 \end{frame}
 
 
-\begin{frame}[allowframebreaks]{Further assumptions}
+\begin{frame}[allowframebreaks]{Numerical simulation}
 	\begin{itemize}
 \item Success arrival intensity: $f(t)=\alpha \, e^\beta + \gamma$, where $\alpha = -10, \beta = -0.02, \gamma = 20$
 \item Discount rate: $r = 0.1$
@@ -600,32 +604,56 @@ child { node [env] {
 			]{figures/lstar}}
 	\end{figure}
 
-	$\ell_*(t, \varphi)$ decreases with $t$---but does that translate into exit procrastination?
+	$\ell_*(t, \varphi)$ decreases with $t$
+%	---but does that translate into exit procrastination?
 \end{frame}
 
 
-\begin{frame}{Initial belief distribution}
-	Inverse exponential distribution on
-	$[\ell - \ell_*(0, \varphi), +\infty)$
 
-	\begin{columns}[t]
-		\begin{column}{0.49\textwidth}
-			\begin{block}{$\varphi = 0.01$}
-				\begin{figure}
-					\includegraphics[width=\linewidth]{figures/ldist1}
-				\end{figure}
-			\end{block}
-		\end{column}
+\begin{frame}{Exit likelihood}
+\begin{figure}[h!]
+		\includegraphics[width= 0.6\textwidth]{figures/ExitlikeliPy}
+		\caption{Exit likelihood by trading age $t$}
+		\label{fig:Exitlikeli}
+\end{figure}
 
-		\begin{column}{0.49\textwidth}
-			\begin{block}{$\varphi = 9$}
-				\begin{figure}
-					\includegraphics[width=\linewidth]{figures/ldist2}
-				\end{figure}
-			\end{block}
-		\end{column}
-	\end{columns}
+Exit likelihood increases and then decreases
 \end{frame}
+
+
+\begin{frame}{Performance by fixed cohort}
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width= 0.5\textwidth]{figures/CohortReturn}
+	\caption{Average return for a specific cohort}
+	\label{fig:CohortReturn}
+\end{figure}
+\end{frame}
+
+
+%
+%\begin{frame}{Initial belief distribution}
+%	Inverse exponential distribution on
+%	$[\ell - \ell_*(0, \varphi), +\infty)$
+%
+%	\begin{columns}[t]
+%		\begin{column}{0.49\textwidth}
+%			\begin{block}{$\varphi = 0.01$}
+%				\begin{figure}
+%					\includegraphics[width=\linewidth]{figures/ldist1}
+%				\end{figure}
+%			\end{block}
+%		\end{column}
+%
+%		\begin{column}{0.49\textwidth}
+%			\begin{block}{$\varphi = 9$}
+%				\begin{figure}
+%					\includegraphics[width=\linewidth]{figures/ldist2}
+%				\end{figure}
+%			\end{block}
+%		\end{column}
+%	\end{columns}
+%\end{frame}
 
 
 \section{Empirical results}
@@ -1014,14 +1042,14 @@ We build a model which demonstrates, in accordance with empirical findings, that
 \begin{itemize}
 	\item There exists a downward moving exit boundary.
 \end{itemize}
-\item Inexperienced traders trade more intensively, possibly in order to discover their trading skill level.
+%\item Inexperienced traders trade more intensively, possibly in order to discover their trading skill level.
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}[allowframebreaks]{References}
 	\bibliographystyle{apalike}
-	\bibliography{trading}
+	\bibliography{TradingBehavior}
 \end{frame}
 
 \begin{frame}
