@@ -36,15 +36,33 @@ temp0 = xx[is.finite(rreturn365),
 # pickage = seq(0, length.out = nbin, by = 1.5) * 365.2425 # pick an age
 # pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
 
-pickage = c(1, 1.5, 2, 3.5, 5) * 365.2425
+agerange = list(
+  c(1, 1.5),
+  c(1.5, 2),
+  c(2, 3.5),
+  c(2, 4),
+  c(3, 4),
+  c(2, 5),
+  c(3, 5),
+  c(3, 5),
+  c(3.5, 5),
+  c(4, 5),
+  c(2, 6),
+  c(3, 6),
+  c(4, 6),
+  c(5, 6),
+  c(3, 7),
+  c(4, 7)
+  )
 
 trselsplm = list()
 ns = c()
 print(0 %>% paste0('====================================================='))
 
 
-for (k in 1:(length(pickage)-1)){
-  popu = regtable[lifetime >= pickage[k+1] & firstobs >= '2009-01-01', c('lifetime', 'client')]
+for (k in 1:length(agerange)){
+  pickage = agerange[[k]] * 365.2425
+  popu = regtable[lifetime >= pickage[2] & firstobs >= '2009-01-01', c('lifetime', 'client')]
   
   # popu[, ':='(cohort = floor(as.numeric(lifetime/(182.62125/6))))] # cohorting in lifetime in half year
   
@@ -59,18 +77,18 @@ for (k in 1:(length(pickage)-1)){
   #     ), by = c('cohort', 'age')][n > 200]
   
   temp = merge(
-    temp0[age > pickage[k] & age <= pickage[k+1]], popu[, c('lifetime', 'client')], by = 'client'
+    temp0[age > pickage[1] & age <= pickage[2]], popu[, c('lifetime', 'client')], by = 'client'
   )
   
   temp[ , ':='(
-    agediff = as.numeric(age - pickage[k]),
-    lifediff = as.numeric(lifetime - pickage[k+1])
+    agediff = as.numeric(age - pickage[1]),
+    lifediff = as.numeric(lifetime - pickage[2])
     )]
 
   temp %>% head %>% print
   
-  gw <- plm(retpr ~ lifediff + agediff + I(lifediff * agediff) , data = temp
-            , effect = 'individual', index = c("client", "account_date")
+  gw <- lm(retpr ~ lifediff + agediff + I(lifediff * agediff) , data = temp
+            # , effect = 'individual', index = c("client", "account_date")
            )
   # gw[['coefficients']] %>% print
   gw %>% summary %>% print
@@ -80,7 +98,7 @@ for (k in 1:(length(pickage)-1)){
   # cor.test(gw[['coefficients']] %>% row.names() %>% as.numeric(), gw[['coefficients']][,2]) %>% print
   #
   gc() 
-  print(k %>% paste0('====================================================='))
+  print(agerange[[k]] %>% paste0('====================================================='))
 }
 
 
