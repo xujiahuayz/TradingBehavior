@@ -16,7 +16,7 @@ echo STARTING at `date`
 module purge
 module load intel intel-mkl
 module load r curl
-srun R CMD BATCH /home/jxu/TradingBehavior/RegressionsR/HPCjobs/Matthew_job.R
+srun R CMD BATCH /home/jxu/TradingBehavior/RegressionsR/HPCjobs/LifetimeRegIndividualEffect_job.R
   
 echo FINISHED at `date`
 
