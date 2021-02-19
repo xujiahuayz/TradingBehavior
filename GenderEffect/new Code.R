@@ -12,8 +12,27 @@ library(hrbrthemes)
 library(ggpubr)
 library(tidyr)
 
+# Constants ----
 
-# import data
+## indicators
+d <-
+  list(
+    'division_hom',
+    'division_fem',
+    'division_hom_by_clients',
+    'division_fem_by_clients'
+  )
+
+
+g <-
+  list(
+    'mean_division_hom',
+    'mean_division_fem',
+    'mean_division_hom_by_clients',
+    'mean_division_fem_by_clients'
+  )
+
+# Import data ----
 rm(list = ls())
 load("/home/qam/Sofiya/Data/computed_returns_2010_2020.rda")
 load("/home/qam/utrans2_2001_2019_reduced.rda")
@@ -56,261 +75,7 @@ save(dataTot2, file = "dataTot4.Rdata")
 save(dataTot, file = "dataTot.Rdata")
 
 
-## Do women like momentum
-
-model_do_women_like_momentum <-
-  glm(
-    formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + ret_measure_25,
-    family = "binomial",
-    data = dataTot
-  )
-
-model2 <-
-  lm(ret_measure_25 ~ factor(title_label), data = dataTot)
-
-model4 <- lm(ret_measure_70 ~ factor(title_label), data = dataTot)
-
-model6 <- lm(ret_measure_250 ~ factor(title_label), data = dataTot)
-
-
-## Regressing future returns using 70 day momentum
-
-model1 <-
-  lm(
-    fut_ret_measure_1 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
-      ret_measure_70,
-    data = dataTot
-  )
-model2 <-
-  lm(
-    fut_ret_measure_5 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
-      ret_measure_70,
-    data = dataTot
-  )
-model3 <-
-  lm(
-    fut_ret_measure_25 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
-      ret_measure_70,
-    data = dataTot
-  )
-model4 <-
-  lm(
-    fut_ret_measure_70 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
-      ret_measure_70,
-    data = dataTot
-  )
-model5 <-
-  lm(
-    fut_ret_measure_250 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
-      ret_measure_70,
-    data = dataTot
-  )
-
-
-##Regressing future returns using 250 day momentum
-
-model6 <-
-  lm(
-    fut_ret_measure_1 ~ factor(title_label) + ret_measure_250 + factor(title_label) *
-      ret_measure_250,
-    data = dataTot
-  )
-
-model7 <-
-  lm(
-    fut_ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
-    data = dataTot
-  )
-
-model8 <-
-  lm(
-    fut_ret_measure_25 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
-    data = dataTot
-  )
-
-model9 <-
-  lm(
-    fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
-    data = dataTot
-  )
-
-model10 <-
-  lm(
-    fut_ret_measure_250 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
-    data = dataTot
-  )
-
-
-##heatmap
-
-##creating a vector with the coefficient estimates for 250 past momentum
-
-coefficient1 <- coef(model6)
-coefficient2 <- coef(model7)
-coefficient3 <- coef(model8)
-coefficient4 <- coef(model9)
-coefficient5 <- coef(model10)
-
-coeffs <-
-  c(coefficient1[4],
-    coefficient2[4],
-    coefficient3[4],
-    coefficient4[4],
-    coefficient5[4])
-
-###creating a vector with the coefficient estimates for 70 day momentum
-
-coeff1 <- coef(model1)
-coeff2 <- coef(model2)
-coeff3 <- coef(model3)
-coeff4 <- coef(model4)
-coeff5 <- coef(model5)
-
-coefficients <-
-  c(coeff1[4], coeff2[4], coeff3[4], coeff4[4], coeff5[4])
-
-
-##Regressing on sales
-
-test2 <-
-  unique(utrans2[utrans2$action == "S" &
-                   utrans2$close_date >= "2010-01-01",])
-
-test2.na <- na.omit(test2)
-dt_merge2 <- merge(test2.na, gender, by = c("client"), all.x = T)
-unique(dt_merge2)
-dt_mergeNew2 <- na.omit(dt_merge2)
-dt_mergeNew2[, isin_code := substr(security_key, 1, 12)]
-dt_mergeNew2[, stock_key := paste(isin_code, currency, sep = '_')]
-
-
-tot_data2 <-
-  merge(
-    dt_mergeNew2,
-    return_data,
-    by = c("stock_key", "close_date"),
-    all.y = TRUE
-  )
-total_data2 <- na.omit(tot_data2)
-data2 <- total_data2[!ret_measure_250 %in% c(-Inf, Inf)]
-dataTot2 <- data2[!fut_ret_measure_250 %in% c(-Inf, Inf)]
-
-
-## Do women sell winners
-
-model1 <-
-  lm(ret_measure_25 ~ factor(title_label), data = dataTot2)
-model2 <-
-  lm(ret_measure_70 ~ factor(title_label), data = dataTot2)
-model3 <-
-  lm(ret_measure_250 ~ factor(title_label), data = dataTot2)
-
-model_do_women_sell_winners <-
-  glm(
-    formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + ret_measure_25,
-    family = "binomial",
-    data = dataTot2
-  )
-
-model_do_women_like_momentum <-
-  glm(
-    formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + ret_measure_25,
-    family = "binomial",
-    data = dataTot
-  )
-
-
-
-### Regressing on future returns only using past return signs
-
-newTotalData <- copy(dataTot)
-
-
-# changing values to 0's and one's
-
-
-ret_250 = c(newTotalData$ret_measure_250)
-ret_250[ret_250 > 0] <- 1
-ret_250[ret_250 <= 0] <- -1
-
-
-ret_250 <- ret_250
-
-ret_70 = c(newTotalData$ret_measure_70)
-ret_70[ret_70 > 0] <- 1
-ret_70[ret_70 <= 0] <- -1
-
-ret_70 <- ret_70
-
-### adding these vectors to the data set
-
-new.df <- data.frame(+ret_250, +ret_70)
-
-dataSet <- (cbind(newTotalData, new.df))
-
-##regressing using 250 day momentum on buys
-
-model1 <-
-  glm(
-    fut_ret_measure_1 ~ factor(title_label) + ret_250 + factor(title_label) * ret_250,
-    data = dataSet
-  )
-model2 <-
-  glm(
-    fut_ret_measure_5 ~ factor(title_label) + ret_250 + factor(title_label) * ret_250,
-    data = dataSet
-  )
-model3 <-
-  glm(
-    fut_ret_measure_25 ~ factor(title_label) + ret_250 + factor(title_label) * ret_250,
-    data = dataSet
-  )
-model4 <-
-  glm(
-    fut_ret_measure_70 ~ factor(title_label) + ret_250 + factor(title_label) *
-      ret_250,
-    data = dataSet
-  )
-model5 <-
-  glm(
-    fut_ret_measure_250 ~ factor(title_label) + ret_250 + factor(title_label) *
-      ret_250,
-    data = dataSet
-  )
-
-## regressing using 70 day momentum on sells
-
-model6 <-
-  glm(fut_ret_measure_1 ~ factor(title_label) + ret_70 + factor(title_label) *
-        ret_70,
-      data = dataSet)
-model7 <-
-  glm(fut_ret_measure_5 ~ factor(title_label) + ret_70 + factor(title_label) *
-        ret_70,
-      data = dataSet)
-model8 <-
-  glm(fut_ret_measure_25 ~ factor(title_label) + ret_70 + factor(title_label) *
-        ret_70,
-      data = dataSet)
-model9 <-
-  glm(fut_ret_measure_70 ~ factor(title_label) + ret_70 + factor(title_label) * ret_70,
-      data = dataSet)
-model10 <-
-  glm(
-    fut_ret_measure_250 ~ factor(title_label) + ret_70 + factor(title_label) *
-      ret_70,
-    data = dataSet
-  )
-
-
-
-
-
-################################################
-##                                            ##
-##      creaing a dollar neutral portfolio    ##
-##      using buy data                        ##
-################################################
+# Creating a dollar neutral portfolio using buy data ----
 
 ### Creating a data set containing all the necessary data by combining data sets
 
@@ -319,8 +84,9 @@ D <- data.table(dataTot)
 months <-
   setDT(D)[, months_years := format(as.Date(c(D$close_date)), "%Y-%m")]
 
-totalData <- (cbind(D, months))
-as.data.table(totalData)
+totalData <- cbind(D, months)
+# %>% as.data.table
+# totalData <- as.data.table(totalData)
 table1 <-
   unique(totalData[, . (
     vol_chf_trans,
@@ -356,13 +122,13 @@ table1 <-
 # @param sumClients = total number of buys per month and isin
 
 tmp = unique(table1[, .(client, title_label, months_years, isin, vol_chf_trans)])
-tmp[, cnt := .N , by = .(months_years, title_label, isin, client)]
+tmp[, cnt := .N , by = .(months_years, title_label, isin
+                         # , client
+                         )]
 tmp[, sum_vol_trans_by_isin := sum(vol_chf_trans), by = . (months_years, title_label, isin)]
 tmp[, sum_vol_trans := sum(vol_chf_trans), by = . (months_years, title_label)]
 tmp2 <-
   tmp[, . (title_label, months_years, sum_vol_trans)] %>% unique %>% dcast(., months_years ~ title_label, value.var = c('sum_vol_trans'))
-
-
 
 tmp = tmp[, .(
   months_years,
@@ -651,14 +417,6 @@ unique_dollar.neutral.portfolio <-
 
 #compute quantiles by months
 
-d <-
-  list(
-    'division_hom',
-    'division_fem',
-    'division_hom_by_clients',
-    'division_fem_by_clients'
-  )
-
 ### names = keys
 c_of_quantiles = c(0.2, 0.8)
 quant <- "quant"
@@ -722,28 +480,19 @@ unique_dollar.neutral.portfolio[, indicator_return_neg := ifelse(ret_measure_25 
 
 ### Find misatke in demeaned fractions by clients
 
-### Demeaning the previous @param
+# Demeaning the previous @param ----
 
 ## @param
 # @ mean_mr/mean_mrs = mean division_hom/mean division_fem
 # @ mean_clients_mr/mean_clients_mrs = mean division_hom_by_clients/mean division_fem_by_clients
 
-g <-
-  list(
-    'mean_division_hom',
-    'mean_division_fem',
-    'mean_division_hom_by_clients',
-    'mean_division_fem_by_clients'
-  )
 mean = "mean"
 demeaned = "demeaned"
 
 for (col in d) {
   name = col
-  
   unique_dollar.neutral.portfolio[,  paste(mean, name, sep = '_')  := mean(get(col)), by =
                                     .(months_years)]
-  
 }
 
 g <-
@@ -1460,3 +1209,256 @@ dollar.neutral.portfolio.first[, portf_ret_4_fem := sum((
     division_fem_by_clients * indicator3_fem * (ret_measure_25 < 0) * fut_ret_measure_25
   )
 )), by = .(months_years)]
+
+
+# Recycle bin ----
+
+## Do women like momentum
+
+model_do_women_like_momentum <-
+  glm(
+    formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + ret_measure_25,
+    family = "binomial",
+    data = dataTot
+  )
+
+model2 <-
+  lm(ret_measure_25 ~ factor(title_label), data = dataTot)
+
+model4 <- lm(ret_measure_70 ~ factor(title_label), data = dataTot)
+
+model6 <- lm(ret_measure_250 ~ factor(title_label), data = dataTot)
+
+
+## Regressing future returns using 70 day momentum
+
+model1 <-
+  lm(
+    fut_ret_measure_1 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
+      ret_measure_70,
+    data = dataTot
+  )
+model2 <-
+  lm(
+    fut_ret_measure_5 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
+      ret_measure_70,
+    data = dataTot
+  )
+model3 <-
+  lm(
+    fut_ret_measure_25 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
+      ret_measure_70,
+    data = dataTot
+  )
+model4 <-
+  lm(
+    fut_ret_measure_70 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
+      ret_measure_70,
+    data = dataTot
+  )
+model5 <-
+  lm(
+    fut_ret_measure_250 ~ factor(title_label) + ret_measure_70 + factor(title_label) *
+      ret_measure_70,
+    data = dataTot
+  )
+
+
+##Regressing future returns using 250 day momentum
+
+model6 <-
+  lm(
+    fut_ret_measure_1 ~ factor(title_label) + ret_measure_250 + factor(title_label) *
+      ret_measure_250,
+    data = dataTot
+  )
+
+model7 <-
+  lm(
+    fut_ret_measure_5 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
+    data = dataTot
+  )
+
+model8 <-
+  lm(
+    fut_ret_measure_25 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
+    data = dataTot
+  )
+
+model9 <-
+  lm(
+    fut_ret_measure_70 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
+    data = dataTot
+  )
+
+model10 <-
+  lm(
+    fut_ret_measure_250 ~ factor(title_label) + ret_measure_250 + factor(title_label) * ret_measure_250,
+    data = dataTot
+  )
+
+
+##heatmap
+
+##creating a vector with the coefficient estimates for 250 past momentum
+
+coefficient1 <- coef(model6)
+coefficient2 <- coef(model7)
+coefficient3 <- coef(model8)
+coefficient4 <- coef(model9)
+coefficient5 <- coef(model10)
+
+coeffs <-
+  c(coefficient1[4],
+    coefficient2[4],
+    coefficient3[4],
+    coefficient4[4],
+    coefficient5[4])
+
+###creating a vector with the coefficient estimates for 70 day momentum
+
+coeff1 <- coef(model1)
+coeff2 <- coef(model2)
+coeff3 <- coef(model3)
+coeff4 <- coef(model4)
+coeff5 <- coef(model5)
+
+coefficients <-
+  c(coeff1[4], coeff2[4], coeff3[4], coeff4[4], coeff5[4])
+
+
+##Regressing on sales
+
+test2 <-
+  unique(utrans2[utrans2$action == "S" &
+                   utrans2$close_date >= "2010-01-01",])
+
+test2.na <- na.omit(test2)
+dt_merge2 <- merge(test2.na, gender, by = c("client"), all.x = T)
+unique(dt_merge2)
+dt_mergeNew2 <- na.omit(dt_merge2)
+dt_mergeNew2[, isin_code := substr(security_key, 1, 12)]
+dt_mergeNew2[, stock_key := paste(isin_code, currency, sep = '_')]
+
+
+tot_data2 <-
+  merge(
+    dt_mergeNew2,
+    return_data,
+    by = c("stock_key", "close_date"),
+    all.y = TRUE
+  )
+total_data2 <- na.omit(tot_data2)
+data2 <- total_data2[!ret_measure_250 %in% c(-Inf, Inf)]
+dataTot2 <- data2[!fut_ret_measure_250 %in% c(-Inf, Inf)]
+
+
+## Do women sell winners
+
+model1 <-
+  lm(ret_measure_25 ~ factor(title_label), data = dataTot2)
+model2 <-
+  lm(ret_measure_70 ~ factor(title_label), data = dataTot2)
+model3 <-
+  lm(ret_measure_250 ~ factor(title_label), data = dataTot2)
+
+model_do_women_sell_winners <-
+  glm(
+    formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + ret_measure_25,
+    family = "binomial",
+    data = dataTot2
+  )
+
+model_do_women_like_momentum <-
+  glm(
+    formula = I(title_label == "Mrs") ~ ret_measure_250 + ret_measure_70 + ret_measure_25,
+    family = "binomial",
+    data = dataTot
+  )
+
+
+
+### Regressing on future returns only using past return signs
+
+newTotalData <- copy(dataTot)
+
+
+# changing values to 0's and one's
+
+
+ret_250 = c(newTotalData$ret_measure_250)
+ret_250[ret_250 > 0] <- 1
+ret_250[ret_250 <= 0] <- -1
+
+
+ret_250 <- ret_250
+
+ret_70 = c(newTotalData$ret_measure_70)
+ret_70[ret_70 > 0] <- 1
+ret_70[ret_70 <= 0] <- -1
+
+ret_70 <- ret_70
+
+### adding these vectors to the data set
+
+new.df <- data.frame(+ret_250, +ret_70)
+
+dataSet <- (cbind(newTotalData, new.df))
+
+##regressing using 250 day momentum on buys
+
+model1 <-
+  glm(
+    fut_ret_measure_1 ~ factor(title_label) + ret_250 + factor(title_label) * ret_250,
+    data = dataSet
+  )
+model2 <-
+  glm(
+    fut_ret_measure_5 ~ factor(title_label) + ret_250 + factor(title_label) * ret_250,
+    data = dataSet
+  )
+model3 <-
+  glm(
+    fut_ret_measure_25 ~ factor(title_label) + ret_250 + factor(title_label) * ret_250,
+    data = dataSet
+  )
+model4 <-
+  glm(
+    fut_ret_measure_70 ~ factor(title_label) + ret_250 + factor(title_label) *
+      ret_250,
+    data = dataSet
+  )
+model5 <-
+  glm(
+    fut_ret_measure_250 ~ factor(title_label) + ret_250 + factor(title_label) *
+      ret_250,
+    data = dataSet
+  )
+
+## regressing using 70 day momentum on sells
+
+model6 <-
+  glm(fut_ret_measure_1 ~ factor(title_label) + ret_70 + factor(title_label) *
+        ret_70,
+      data = dataSet)
+model7 <-
+  glm(fut_ret_measure_5 ~ factor(title_label) + ret_70 + factor(title_label) *
+        ret_70,
+      data = dataSet)
+model8 <-
+  glm(fut_ret_measure_25 ~ factor(title_label) + ret_70 + factor(title_label) *
+        ret_70,
+      data = dataSet)
+model9 <-
+  glm(fut_ret_measure_70 ~ factor(title_label) + ret_70 + factor(title_label) * ret_70,
+      data = dataSet)
+model10 <-
+  glm(
+    fut_ret_measure_250 ~ factor(title_label) + ret_70 + factor(title_label) *
+      ret_70,
+    data = dataSet
+  )
+
+
+
+                                     
