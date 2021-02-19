@@ -1,4 +1,4 @@
-    # load libraryhttps://github.com/xujiahuayz/TradingBehavior/blob/master/GenderEffect/new%20Code
+    # load library
     library(qqplotr)
     library(ggplot2)
     library(data.table)
@@ -42,8 +42,11 @@
     data<-total_data[!ret_measure_250 %in% c(-Inf, Inf)]
     dataTot<-data[!fut_ret_measure_250 %in% c(-Inf, Inf)]
     
-    dataTot2<- dataTot[1:100,]
-    save(dataTot2, file = "dataTot3.Rdata")
+    dataTot2<- dataTot[1:100000,]
+    save(dataTot2, file = "dataTot4.Rdata")
+    
+    
+    save(dataTot, file = "dataTot.Rdata")
     
     
     ## Do women like momentum
@@ -185,7 +188,7 @@
     
     ### Creating a data set containing all the necessary data by combining data sets
     
-    D<-data.table(dataTot2)
+    D<-data.table(dataTot)
     
     months<-setDT(D)[, months_years := format(as.Date(c(D$close_date)), "%Y-%m") ]
     
@@ -210,13 +213,24 @@
     
     tmp = unique(table1[,.(client, title_label, months_years, isin, vol_chf_trans)])
     tmp[, cnt:= .N , by = .(months_years,title_label, isin,client)]
+    tmp[, sum_vol_trans_by_isin := sum(vol_chf_trans), by =. (months_years, title_label, isin)]
+    tmp[, sum_vol_trans := sum(vol_chf_trans), by =. (months_years, title_label)] 
+    tmp2 <- tmp[,. (title_label, months_years, sum_vol_trans)]%>%unique%>%dcast(., months_years ~ title_label, value.var = c('sum_vol_trans'))
     
-    tmp = tmp[,.(months_years, isin, title_label, cnt,client,vol_chf_trans)]%>%unique()
+    
+    
+    tmp = tmp[,.(months_years, isin, title_label, cnt,client,vol_chf_trans, sum_vol_trans, sum_vol_trans_by_isin)]%>%unique()
     tmp4 = dcast(tmp, months_years  + isin ~ title_label, value.var = c('cnt'))
+    tmp5 = dcast(tmp, months_years ~ title_label, value.var = c('sum_vol_trans'))
+    setnames(tmp5, "Mr", "sum_vol_trans_mr")
+    setnames(tmp5,"Mrs", "sum_vol_trans_mrs")
     setnames(tmp4, "Mr", "count_mr_transactions_per_isin_date")
     setnames(tmp4,"Mrs", "count_mrs_transactions_per_isin_date")
-    tmp4[, sumClients:= (count_mr_transactions_per_isin_date+count_mrs_transactions_per_isin_date) , by = .(months_years, isin)]
+    tmp4[, sumClients:= (count_mr_transactions_per_isin_date + count_mrs_transactions_per_isin_date) , by = .(months_years, isin)]
+    tmp5[, sum_vol_trans:= ( sum_vol_trans_mr + sum_vol_trans_mrs) , by = .(months_years)]
     tmp6<- merge(tmp4, tmp, by =c("months_years","isin"), all.x =T)
+    tmp7<- merge(tmp5, tmp6, by = c("months_years"), all.x = T)
+
     
     
     ###Combining old data and new data containing the new columns 
@@ -231,7 +245,7 @@
     as.data.table(newTable2)
     
     #data table with future and past returns 
-    totalTable<- unique(merge(tmp6, newTable2, by= ("months_years"), all.x = T))
+    totalTable<- unique(merge(tmp7, newTable2, by= ("months_years"), all.x = T))
     datTotalData<- data.table(totalData)
     
     returns_fut_past<-datTotalData[,. (ret_measure_1, ret_measure_5, fut_ret_measure_5, ret_measure_25, fut_ret_measure_25, ret_measure_70, ret_measure_250, fut_ret_measure_250,fut_ret_measure_1,fut_ret_measure_70,months_years, isin, client, vol_chf_trans)]
@@ -312,50 +326,55 @@
     
     #compute quantiles by months
     
-    d <-  list()
-    d[['Mr']] <- unique_dollar.neutral.portfolio$division_hom
-    d[['Mrs']] <- unique_dollar.neutral.portfolio$division_fem
-    d[['clients_Mr']] <- unique_dollar.neutral.portfolio$division_hom_by_clients
-    d[['clients_Mrs']] <- unique_dollar.neutral.portfolio$division_fem_by_clients
+    d <-list('division_hom', 'division_fem', 'division_hom_by_clients','division_fem_by_clients' )
     
     ### names = keys
     c_of_quantiles = c(0.2, 0.8)
     quant<-"quant"
     
     
-    for (name in names(d)){
-    for (quantile1 in c_of_quantiles) {
-    col = switch(name, 'Mr' = 'division_hom',
-           'Mrs' = 'division_fem',
-           'clients_Mrs' = 'division_fem_by_clients',
-           'clients_Mr' = 'division_hom_by_clients')
-    
-    unique_dollar.neutral.portfolio[,  paste(quant, name, quantile1, sep='_')  := quantile(get(col), quantile1), by=.(months_years)]
-    }
+    for (col in d){
+      
+      for (quantile1 in c_of_quantiles) {
+        
+        name = col
+        
+        unique_dollar.neutral.portfolio[,  paste(quant, name,quantile1,sep='_')  := quantile(get(col), quantile1), by=.(months_years)]
+        
+      }
     }
     
     ### Create indicators based on the computed quantiles
     # indicators represent values bigger ans smaller than the previosly computed quantiles
     
-    computing_high_indicators <- function(division, quantile){
+    high_indicators <- list('quant_division_hom_0.8', 'quant_division_fem_0.8', 'quant_division_hom_by_clients_0.8', 'quant_division_fem_by_clients_0.8')
+    low_indicators <- list('quant_division_hom_0.2', 'quant_division_fem_0.2', 'quant_division_hom_by_clients_0.2', 'quant_division_fem_by_clients_0.2')
     
-    ifelse(division > quantile ,1,0)
+    high_ind = "high_indicator"
+    low_ind = "low_indicator"
+    list_length = length( high_indicators)
+    
+    computing_high_indicators <- function(division, quantile){
+      
+      ifelse(division > quantile ,1,0)
     }
     
     computing_low_indicators <- function(division, quantile){
-    
-    ifelse(division < quantile ,1,0)
+      
+      ifelse(division < quantile ,1,0)
     }
     
-    unique_dollar.neutral.portfolio[, indicator_high_fem:= computing_high_indicators(division_fem, quant_Mrs_0.8) ]
-    unique_dollar.neutral.portfolio[, indicator_low_fem := computing_low_indicators(division_fem, quant_Mrs_0.2) ]
-    unique_dollar.neutral.portfolio[, indicator_low_fem_clients := computing_low_indicators(division_fem_by_clients, quant_clients_Mrs_0.2) ]
-    unique_dollar.neutral.portfolio[, indicator_high_fem_clients := computing_high_indicators(division_fem_by_clients, quant_clients_Mrs_0.8) ]
-    
-    unique_dollar.neutral.portfolio[, indicator_high_hom:= computing_high_indicators(division_hom, quant_Mr_0.8) ]
-    unique_dollar.neutral.portfolio[, indicator_low_hom := computing_low_indicators(division_hom, quant_Mr_0.2) ]
-    unique_dollar.neutral.portfolio[, indicator_low_hom_clients := computing_low_indicators(division_hom_by_clients, quant_clients_Mr_0.2) ]
-    unique_dollar.neutral.portfolio[, indicator_high_hom_clients := computing_high_indicators(division_hom_by_clients, quant_clients_Mr_0.8) ]
+    for(i in 1: list_length){
+      
+      high_indicator = high_indicators[[i]]
+      low_indicator = low_indicators[[i]]
+      col = d[[i]]
+      name = col
+      
+      unique_dollar.neutral.portfolio[,  paste(high_ind, name,sep='_')  := computing_high_indicators(get(col), get(high_indicator))]
+      unique_dollar.neutral.portfolio[, paste(low_ind, name,sep='_') := computing_low_indicators(get(col), get(low_indicator)) ]
+      
+    }
     
     unique_dollar.neutral.portfolio[, indicator_return_pos := ifelse(ret_measure_25>0, 1,0)]
     unique_dollar.neutral.portfolio[, indicator_return_neg := ifelse(ret_measure_25<0, 1,0)]
@@ -368,19 +387,29 @@
     # @ mean_mr/mean_mrs = mean division_hom/mean division_fem
     # @ mean_clients_mr/mean_clients_mrs = mean division_hom_by_clients/mean division_fem_by_clients
     
+    g<- list('mean_division_hom','mean_division_fem', 'mean_division_hom_by_clients', 'mean_division_fem_by_clients' )
     mean = "mean"
     demeaned = "demeaned"
     
-    for (name in names(d)){
-    col = switch(name, 'Mr' = 'division_hom',
-           'Mrs' = 'division_fem',
-           'clients_Mrs' = 'division_fem_by_clients',
-           'clients_Mr' = 'division_hom_by_clients')
+    for (col in d){
     
+      name = col
+      
     unique_dollar.neutral.portfolio[,  paste(mean, name,sep='_')  := mean(get(col)), by=.(months_years)]
-    unique_dollar.neutral.portfolio[, paste(demeaned, name, sep = '_') := get(col) - mean(get(col)), by =.(months_years)]
+    
     }
     
+    g<- list('mean_division_hom','mean_division_fem', 'mean_division_hom_by_clients', 'mean_division_fem_by_clients' )
+    
+    for (i in 1:length(g)){
+      
+      col = d[[i]]
+      col2 =g[[i]]
+      name = col
+      
+      unique_dollar.neutral.portfolio[,  paste(demeaned, name,sep='_')  := (get(col) - mean(get(col2))), by=.(months_years)]
+      
+    }
     ### We build this to be able to see the interaction effect between gender and return signals
     
     computing_types <- function(division, indicator){
@@ -388,56 +417,31 @@
     return(type)
     }
     
-    a <-  list()
-    a[['type_pos_fem']] <- unique_dollar.neutral.portfolio$indicator_high_fem
-    a[['type_neg_fem']] <- unique_dollar.neutral.portfolio$indicator_low_fem
+    type_list_fem <- list('high_indicator_division_fem', 'low_indicator_division_fem')
+    type_list_hom <- list('high_indicator_division_hom', 'low_indicator_division_hom')
+    type_returns_list <- list('indicator_return_pos', 'indicator_return_neg')
+    type = "type"
+
     
-    b <-  list()
-    b[['type_pos_hom']] <- unique_dollar.neutral.portfolio$indicator_high_hom
-    b[['type_neg_hom']] <- unique_dollar.neutral.portfolio$indicator_low_hom
+    for (i in 1:length(type_list_fem)){
     
-    c<-list()
-    c[['type_pos_using_mean']] <- unique_dollar.neutral.portfolio$indicator_return_pos
-    c[['type_neg_using_mean']] <- unique_dollar.neutral.portfolio$indicator_return_neg
-    
-    e <-list()
-    e[['meanfem']] <- unique_dollar.neutral.portfolio$mean_Mrs
-    
-    
-    for (name in names(a)){
-    col = switch(name, 'type_pos_fem' = 'indicator_high_fem',
-           'type_neg_fem' = 'indicator_high_fem')
-    unique_dollar.neutral.portfolio[,  paste(name)  := computing_types(division_fem, get(col))]
+      type_fem = type_list_fem[[i]]
+      type_hom = type_list_hom[[i]]
+      type_returns = type_returns_list[[i]]
+      
+    unique_dollar.neutral.portfolio[,  paste(type,type_fem ,sep = "_")  := computing_types(division_fem, get(type_fem))]
+    unique_dollar.neutral.portfolio[,  paste(type,type_hom, sep = "_")  := computing_types(division_hom, get(type_hom))]
+    unique_dollar.neutral.portfolio[, paste(type,type_returns,"fem", sep = ''):= computing_types(mean_division_fem, get(type_returns))]
+    unique_dollar.neutral.portfolio[,  paste(type,type_returns,"hom", sep = '')  := computing_types(mean_division_hom, get(type_returns))]
     
     }
     
-    for (name in names(b)){
-    col = switch(name, 'type_pos_hom' = 'indicator_high_hom',
-           'type_neg_hom' = 'indicator_high_hom')
-    
-    unique_dollar.neutral.portfolio[,  paste(name)  := computing_types(division_hom, get(col))]
-    
-    }
-    
-    for (name in names(c)){
-    col = switch(name, 'type_pos_using_mean' = 'indicator_return_pos',
-           'type_neg_using_mean' = 'indicator_return_neg')
-    
-    if(name %in% names(e)){
-      
-    unique_dollar.neutral.portfolio[, paste(name,"fem", sep = ''):= computing_types(mean_Mrs, get(col))]
-      
-    }
-    else{
-      
-    unique_dollar.neutral.portfolio[,  paste(name,"hom", sep = '')  := computing_types(mean_Mr, get(col))]
-      
-       }
-    }
-    
+   
     ### Building the dollar neutral portfolio
     
     portf_ret <- "portf_ret"
+    
+    future_returns_to_be_traded = "fut_ret_measure_25"
     
     creating_column_names <- function(name){
     
@@ -446,19 +450,13 @@
       return(column_name)
     }
     
-    f <-  list()
-    f[['simple_Mr']] <- unique_dollar.neutral.portfolio$demeaned_Mr
-    f[['simple_Mrs']] <- unique_dollar.neutral.portfolio$demeaned_Mrs
-    f[['simple_clients_Mr']] <- unique_dollar.neutral.portfolio$demeaned_clients_Mr
-    f[['simple_clients_Mrs']] <- unique_dollar.neutral.portfolio$demeaned_clients_Mrs
+    f <-  list('demeaned_division_hom', 'demeaned_division_fem', 'demeaned_division_hom_by_clients','demeaned_division_fem_by_clients')
+
+    for (col in f){
     
-    for (name in names(f) ){
-    col = switch(name, 'simple_Mr' = 'demeaned_Mr',
-           'simple_Mrs' = 'demeaned_Mrs',
-           'simple_clients_Mrs' = 'demeaned_clients_Mr',
-           'simple_clients_Mr' = 'demeaned_clients_Mrs')
+    name = col
     
-    unique_dollar.neutral.portfolio[, creating_column_names(name) := sum(get(col)* fut_ret_measure_25 ), by = .(months_years)]
+    unique_dollar.neutral.portfolio[, creating_column_names(name) := sum(get(col)* get(future_returns_to_be_traded) ), by = .(months_years)]
     
     }
     
@@ -468,30 +466,24 @@
     }
     
     good_portfolio_returns <- function(indicator1, indicator2, returns){
-      position = indicator1 - indicator2
+      position <- (indicator1 - indicator2)
       return(portfolio_returns(position, returns))
     }
     
     great_portfolio_returns <- function (indicator, timing_factor, returns){
-      positions = indicator * timing_factor
+      positions <- (indicator * timing_factor)
       return(portfolio_returns(positions, returns))
     }
+
     
-    high_list <- list()
-    h[['high_fem']] <- unique_dollar.neutral.portfolio$indicator_high_fem
-    h[['high_hom']] <- unique_dollar.neutral.portfolio$indicator_high_hom
-    h[['high_fem_clients']] <- unique_dollar.neutral.portfolio$indicator_high_fem_clients
-    h[['high_hom_clients']] <- unique_dollar.neutral.portfolio$indicator_high_hom_clients
-    
-    all_stuff_high <- list('indicator_high_fem', 'indicator_high_hom', 'indicator_high_fem_clients', 'indicator_high_hom_clients')
-    all_stuff_low <- list('indicator_low_fem', 'indicator_low_hom', 'indicator_low_fem_clients', 'indicator_low_hom_clients')
+    all_stuff_high <- list('high_indicator_division_hom', 'high_indicator_division_fem', 'high_indicator_division_hom_by_clients', 'high_indicator_division_fem_by_clients')
+    all_stuff_low <- list('low_indicator_division_hom', 'low_indicator_division_fem', 'low_indicator_division_hom_by_clients', 'low_indicator_division_fem_by_clients')
     indicators <- list('indicator_return_pos', 'indicator_return_neg')
     
     length_list <- length(all_stuff_high)
     
     great = "great"
-    
-    future_returns_to_be_traded = "fut_ret_measure_25"
+  
     
     portf_ret = "portf_ret"
     
@@ -502,28 +494,16 @@
       # get the analogous low_indicator 
         high_name = all_stuff_high[[i]]
         low_name = all_stuff_low[[i]]
+        name = d[[i]]
         
-        name = creating_column_names(i)
-        
-        append(names_for_portfolio_columns, name)
-        
-        unique_dollar.neutral.portfolio[, paste(creating_column_names(i),high_name,low_name, sep ='_') := good_portfolio_returns(get(high_name), get(low_name), get(future_returns_to_be_traded)), by =. (months_years)]
+        unique_dollar.neutral.portfolio[, paste(creating_column_names(i),name, sep ='_') := good_portfolio_returns(get(high_name), get(low_name), get(future_returns_to_be_traded)), by =. (months_years)]
     
          for (timing_factor in indicators){
         
-         name2 = paste(portf_ret,high_name, timing_factor, sep = '_')  
-         
-         name3 = paste(portf_ret,low_name, timing_factor, sep = '_') 
-           
-        append(names_for_portfolio_columns, name2)
-        
-        append(names_for_portfolio_columns, name3)
-
-        unique_dollar.neutral.portfolio[, paste(portf_ret,high_name, timing_factor, sep = '_') := great_portfolio_returns(get(high_name), get(timing_factor), get(future_returns_to_be_traded)), by =. (months_years)]
+        unique_dollar.neutral.portfolio[, paste(portf_ret,name, timing_factor, sep = '_') := great_portfolio_returns(get(high_name), get(timing_factor), get(future_returns_to_be_traded)), by =. (months_years)]
   
-        unique_dollar.neutral.portfolio[, paste(portf_ret,low_name, timing_factor, sep = '_') := great_portfolio_returns(get(low_name), get(timing_factor), get(future_returns_to_be_traded)), by =. (months_years)]
+        unique_dollar.neutral.portfolio[, paste(portf_ret,name, timing_factor, sep = '_') := great_portfolio_returns(get(low_name), get(timing_factor), get(future_returns_to_be_traded)), by =. (months_years)]
         
-    
       }
     }  
   
@@ -532,27 +512,32 @@
     ###Function for computing excess returns
     
     computing_excess_returns <- function(portfolio_returns, risk_free_rate)
+      
     {
+      
     excess_returns <- Return.excess(portfolio_returns, Rf = risk_free_rate)
+    
     }
     
-    new_list <- list(colnames(unique_dollar.neutral.portfolio))
     
     unique_dollar.neutral.portfolio[,years:=substr(months_years,1,4)]
   
-    l <- list("portf_ret_simple_Mrs", "portf_ret_simple_Mr", "portf_ret_simple_clients_Mrs", "portf_ret_simple_clients_Mr",
-              "portf_ret_high_fem", "portf_ret_high_hom", "portf_ret_high_fem_clients", "portf_ret_high_hom_clients",'great_portf_ret_high_fem', "great_portf_ret_high_hom",
-              "great_portf_ret_high_fem_clients", "great_portf_ret_high_hom_clients")
+    l <- list("portf_ret_demeaned_division_fem", "portf_ret_demeaned_division_hom", "portf_ret_demeaned_division_fem_by_clients", "portf_ret_demeaned_division_hom_by_clients",
+              "portf_ret_2_division_fem", "portf_ret_1_division_hom", "portf_ret_4_division_fem_by_clients", "portf_ret_3_division_hom_by_clients",'portf_ret_division_hom_by_clients_indicator_return_neg', "portf_ret_division_fem_by_clients_indicator_return_neg",
+              "portf_ret_division_fem_indicator_return_neg", "portf_ret_division_hom_indicator_return_neg", "portf_ret_division_fem_by_clients_indicator_return_pos", "portf_ret_division_hom_by_clients_indicator_return_pos", "portf_ret_division_hom_indicator_return_pos",
+              "portf_ret_division_fem_indicator_return_pos")
    
     return_excess = "return_excess"
     std_dev = "std_dev"
     mannual_annualized_sharpe_ratio = "mannual_annualized_sharpe_ratio"
     
-    computing_sharpe_ratios <- function(column){
+    computing_sharpe_ratios <- function(column) {
+      
       result = sqrt(12) * mean(column)/sd(column)
+      
     }
     
-    for (col in l){
+    for (col in l) {
      
       name = col
       
@@ -560,7 +545,81 @@
       unique_dollar.neutral.portfolio[, paste(mean, name, sep = '_') :=  mean(get(col)), by =.(years)]
       unique_dollar.neutral.portfolio[, paste(std_dev, name, sep = '_') := sd(get(col)), by =. (years)]
       unique_dollar.neutral.portfolio[, paste(mannual_annualized_sharpe_ratio, name, sep = '_') := computing_sharpe_ratios(get(col)), by =.(years)]
+      
     }
+    
+    
+    file2<- "/home/qam/F-F_Research_Data_Factors.CSV"
+    
+    fama_french_data1 <- fread(file2)
+    
+    setnames(fama_french_data1, "V1", "months_years")
+    
+    fama_french_data1[,years:=substr(months_years,1,4)]
+    
+    fama_french_data1[,months:=substr(months_years,5,6)]
+    
+    fama_french <-fama_french_data1[fama_french_data1$months_years >= "201001",]
+    
+    fama_french[,months_years:=paste(years,months,sep='-')]
+    
+    for(i in 2:5){
+      
+    fama_french[[i]] = fama_french[[i]]/100
+    
+    }
+    
+    portfolio <- unique(unique_dollar.neutral.portfolio[,.(portf_ret_demeaned_division_fem, portf_ret_demeaned_division_hom, portf_ret_demeaned_division_fem_by_clients, portf_ret_demeaned_division_hom_by_clients,
+                                                        portf_ret_2_division_fem, portf_ret_1_division_hom, portf_ret_4_division_fem_by_clients, portf_ret_3_division_hom_by_clients,portf_ret_division_hom_by_clients_indicator_return_neg, portf_ret_division_fem_by_clients_indicator_return_neg,
+                                                        portf_ret_division_fem_indicator_return_neg, portf_ret_division_hom_indicator_return_neg, portf_ret_division_fem_by_clients_indicator_return_pos, portf_ret_division_hom_by_clients_indicator_return_pos, portf_ret_division_hom_indicator_return_pos,
+                                                        portf_ret_division_fem_indicator_return_pos, months_years)])
+    
+    
+    fama_french_dollar_neutral_portfolio <- merge(portfolio, fama_french, by = c("months_years"), all.x = T)
+    
+    ### Converting returns from francs to dollars
+    
+    regression = "regression"
+    names <- colnames(fama_french_dollar_neutral_portfolio)
+    
+    naming_regressions <- function(name){
+      
+      paste(regression, name, sep ="_")
+    }
+    
+    for (i in 2:17){
+    
+      fama_french_dollar_neutral_portfolio[[i]] = fama_french_dollar_neutral_portfolio[[i]]*1.12  
+      fama_french_dollar_neutral_portfolio[[i]] = (fama_french_dollar_neutral_portfolio[[i]] - fama_french_dollar_neutral_portfolio$RF)
+      
+     alphas <-regressing_to_compute_alpha(fama_french_dollar_neutral_portfolio[[i]], fama_french_dollar_neutral_portfolio)
+     print(summary(alphas))
+      
+    }
+    
+    regressing_to_compute_alpha <- function(returns, dataa) {
+      
+      alpha <- lm(returns ~ fama_french_dollar_neutral_portfolio$SMB + fama_french_dollar_neutral_portfolio$HML + fama_french_dollar_neutral_portfolio$Mkt-RF, data = dataa)
+      
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
