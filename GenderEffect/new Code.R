@@ -1,4 +1,4 @@
-    # load library
+    # load libraryhttps://github.com/xujiahuayz/TradingBehavior/blob/master/GenderEffect/new%20Code
     library(qqplotr)
     library(ggplot2)
     library(data.table)
