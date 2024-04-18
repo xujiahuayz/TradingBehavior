@@ -1,12 +1,3 @@
-# contango
-
-## Setup
-
-```
-git clone https://github.com/xujiahuayz/contango.git
-cd contango
-```
-
 ### Give execute permission to your script and then run `setup_repo.sh`
 
 ```
