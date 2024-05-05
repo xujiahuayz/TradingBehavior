@@ -1,4 +1,7 @@
+from learning.settings import PROJECT_ROOT
 import numpy as np
+
+FIG_DIR = PROJECT_ROOT / "figures"
 
 alp = -0.5
 bet = -0.2
@@ -25,9 +28,10 @@ nubarb = 1 - nubarg
 
 
 # check: upperbound must exceed 0!!!
-upperbound = (alp + gam - 0.5 * (r + bet)
-              ) if alp > 0 else (
-(alp + gam) - (r + alp * bet/(alp + gam)) / 2
+upperbound = (
+    (alp + gam - 0.5 * (r + bet))
+    if alp > 0
+    else ((alp + gam) - (r + alp * bet / (alp + gam)) / 2)
 )
 
 # ((alp + gam) * r * (1 + gam / r + alp / (-bet + r))) / (alp + gam + r)
@@ -39,9 +43,11 @@ Ts = np.array([1, 5, 10])
 
 ns = range(len(Ts))
 
-
-figdir = '../../figure/'
-
-teev = np.concatenate([
-    [0.001, 0.01, 0.03], np.linspace(0.05, 0.95, 19), np.linspace(1, 3.5, 26), np.linspace(4, 20, 17)
-])
+teev = np.concatenate(
+    [
+        np.array([0.001, 0.01, 0.03]),
+        np.linspace(0.05, 0.95, 19),
+        np.linspace(1, 3.5, 26),
+        np.linspace(4, 20, 17),
+    ]
+)
