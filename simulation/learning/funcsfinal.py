@@ -1,4 +1,3 @@
-from typing import Any, Iterable
 from numpy.typing import NDArray
 import numpy as np
 from scipy.integrate import quad, nquad
@@ -20,7 +19,7 @@ from learning.constants import (
 )
 from numba import njit
 
-quadoptions = {"epsrel": 0.005}
+QUAD_OPTIONS = {"epsrel": 0.005}
 
 
 # choose a function f(tee), monotone increasing ----
@@ -286,12 +285,6 @@ def exitratep(phi: float, tee: float, s: bool) -> float:
 
 def exitrate(tee: float, s: bool) -> float:
     return quad(lambda phi: exitratep(phi, tee, s), 0, upperbound, epsrel=0.001)[0]
-
-
-#
-# def exitrateBp(phi, tee):
-#     lstarv = lstar(tee, phi)
-#     return (1 + lstardir(phi, tee)) * tempmusOne(lstarv, phi, tee, True)
 
 
 @njit
