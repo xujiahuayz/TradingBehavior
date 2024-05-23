@@ -2,6 +2,7 @@ from learning.settings import PROJECT_ROOT
 import numpy as np
 
 FIG_DIR = PROJECT_ROOT / "figures"
+DATA_DIR = PROJECT_ROOT / "data"
 
 alp = -0.5
 bet = -0.2

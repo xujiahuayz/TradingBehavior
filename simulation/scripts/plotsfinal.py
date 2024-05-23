@@ -8,7 +8,7 @@ from learning.funcsfinal import (
     funcf,
     ttlmasOne,
 )
-from learning.constants import teev, res, rouexit,  FIG_DIR
+from learning.constants import teev, res, rouexit, FIG_DIR
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -122,7 +122,6 @@ plt.savefig(FIG_DIR / "CohortReturn.pdf")
 plt.show()
 
 
-
 ## Fig 2(a)
 plt.close()
 plt.plot(teev, exit_rate_G + exit_rate_B + exit_rate_inf, "k", label="Total")
@@ -175,7 +174,7 @@ axes.yaxis.set_ticks_position("left")
 plt.legend(bbox_to_anchor=(1, 1), loc=1, handlelength=2, frameon=False)
 
 plt.tight_layout()
-plt.savefig(FIG_DIR /"ExitlikeliPy.pdf")
+plt.savefig(FIG_DIR / "ExitlikeliPy.pdf")
 plt.show()
 
 

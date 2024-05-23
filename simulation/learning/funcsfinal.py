@@ -1,8 +1,10 @@
+import math
+from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 import numpy as np
 from scipy.integrate import quad, nquad
 from scipy.optimize import fsolve
-from scipy.stats import norm
+from scipy.stats import norm, rv_continuous
 from scipy.misc import derivative
 from learning.constants import (
     alp,
@@ -19,6 +21,7 @@ from learning.constants import (
 )
 from numba import njit
 
+
 QUAD_OPTIONS = {"epsrel": 0.005}
 
 
@@ -29,15 +32,25 @@ def funcf(tee: float) -> float:
 
 
 ## F(x), checked by mathematica
+def fint(tee: float, start_age: float = 0) -> float:
+    tee = tee + start_age
+    return fint_no_constant(tee) - fint_no_constant(start_age)
+
+
 @njit
-def fint(tee: float) -> float:
-    return alp / bet * (np.exp(bet * tee) - 1) + gam * tee
+def fint_no_constant(tee: float) -> float:
+    return alp / bet * np.exp(bet * tee) + gam * tee
 
 
 # pi(l) ----
 @njit
 def funcpi(l: float) -> float:
     return 1 / (np.exp(-l) + 1)
+
+
+# pi(l) ----
+def pi_ell(tee, pi0):
+    return 1 / ((1 / pi0 - 1) * np.exp(fint(tee)) + 1)
 
 
 # V_G(t) ----
@@ -157,7 +170,7 @@ nuf = nus(False)
 # at the beginning we should have a lot of traders very confident
 # so I changed the exponential distribution into inverse exponential distribution
 @njit
-def nul(l: float, phi: float, skills: bool) -> float:  
+def nul(l: float, phi: float, skills: bool) -> float:
     x = lstar(tee=0, phi=phi) - l
     return np.exp(lambdal(skills) / x) / (x * x)
 
@@ -254,7 +267,7 @@ def mur(R: float, tee: float, *args) -> float:
         m = muGinf(tee=tee)
     wt = norm.pdf(R, funcf(tee), sig)
     wf = norm.pdf(R, 0, 1)
-    return aggreturnp(tee, wt, wf) + m * wt # type: ignore
+    return aggreturnp(tee, wt, wf) + m * wt  # type: ignore
 
 
 def murt(R: float, Time: float) -> float:
@@ -321,6 +334,63 @@ def murexitp(R: float, tee: float) -> float:
 def murtexitc(R: float, Time: float) -> float:
     return quad(lambda x: murexitp(R=R, tee=x), 0, Time, epsrel=0.01)[0]
 
+
+def pmf(tee: float, n: int) -> float:
+    return sum(
+        [(fint(tee) ** i) / (np.exp(fint(tee)) * math.factorial(i)) for i in range(n)]
+    )
+
+
+def pmf_first(tee: float, start_age: float = 0) -> float:
+    return np.exp(-fint(tee, start_age))
+
+
+def tmeans(n: int) -> float:
+    def dens(tee: float, n: int) -> float:
+        return (fint(tee) ** (n - 1) * funcf(tee)) / (
+            np.exp(fint(tee)) * math.factorial(n - 1)
+        )
+
+    return quad(lambda tee: tee * dens(tee, n), 0, np.inf)[0]
+
+
+# To create a custom random variable class given a CDF you could subclass scipy.rv_continuous and override rv_continuous._cdf. This will then automatically generate the corresponding PDF and other statistical information about your distribution, e.g.
+
+
+class NonHomoPoisDist(rv_continuous):
+    def __init__(self, current_age: float = 0, xtol: float = 1e-14, seed=None):
+        super().__init__(a=0, xtol=xtol, seed=seed)
+        self.current_age = current_age
+
+    def _cdf(self, x):
+        return 1 - pmf_first(x, start_age=self.current_age)
+
+
+if __name__ == "__main__":
+
+    for current_age in [0, 3, 8, 1e9]:
+        non_homo_pois_dist = NonHomoPoisDist(current_age=current_age)
+        pts = np.linspace(0, 10)
+        plt.plot(pts, non_homo_pois_dist.cdf(pts), label=current_age)
+        plt.legend()
+
+    plt.plot(range(100), [funcf(p) for p in range(100)])
+    # sample distribution
+    # samples = non_homo_pois_dist.rvs(size=10000)
+
+    # # plot histogram of samples
+    # fig, ax1 = plt.subplots()
+    # ax1.hist(list(samples), bins=50)
+
+    # # plot PDF and CDF of distribution
+    # pts = np.linspace(0, 5)
+    # ax2 = ax1.twinx()
+    # ax2.set_ylim(0, 1.1)
+    # ax2.plot(pts, non_homo_pois_dist.pdf(pts), color="red")
+    # ax2.plot(pts, non_homo_pois_dist.cdf(pts), color="orange")
+
+    # fig.tight_layout()
+    # plt.show()
 
 # to calculate murexit use
 # inconf = murexitp(R, tee, **kwargs)
