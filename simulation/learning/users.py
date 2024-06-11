@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from matplotlib import pyplot as plt
 import numpy as np
-from learning.funcsfinal import NonHomoPoisDist
+from learning.funcsfinal import NonHomoPoisDist, funcf, vg
+from learning.constants import r
+from scipy.integrate import quad
 
 
 class TradingEnv:
-    def __init__(self, discount_rate: float = 0.05):
+    def __init__(self, discount_rate: float = r):
 
         self.time = 0
         self.discount_rate = discount_rate
@@ -38,7 +40,7 @@ class GoodUser(_User):
         super().__init__(id_no, prior_belief, cost, env)
         self.is_good = True
         non_homo_pois_dist = NonHomoPoisDist(current_age=0)
-        self.first_jump = non_homo_pois_dist.rvs(1)
+        self.first_jump: float = non_homo_pois_dist.rvs(1)
 
     def simulate_future_jumps(self, n: int) -> tuple[list[float], list[float]]:
         start_age = self.first_jump
@@ -70,9 +72,18 @@ class BadUser(_User):
         self.first_jump = np.inf
 
 
-# name = main
-
 if __name__ == "__main__":
-    trad_env = TradingEnv()
-    alice = GoodUser(id_no=1, prior_belief=0.2, cost=0.3, env=trad_env)
-    jump_age, returns = alice.simulate_future_jumps(int(1e4))
+    trad_env = TradingEnv(discount_rate=r)
+    alice = GoodUser(id_no=1, prior_belief=0.2, cost=0, env=trad_env)
+    vg_values = []
+    for _ in range(100):
+        jump_age, returns = alice.simulate_future_jumps(int(500))
+        discounted_returns = []
+        for i, a in enumerate(jump_age):
+            discounted_returns.append(returns[i] / np.exp(trad_env.discount_rate * a))
+        vg_values.append(discounted_returns[-1])
+    # the value converges
+    plt.plot(jump_age[:100], discounted_returns[:100])
+    np.mean(vg_values)
+    vg(tee=0, phi=0)
+    quad(lambda s: np.exp(-r * (s - 0)) * funcf(s), 0, np.inf)

@@ -7,9 +7,9 @@ from scipy.optimize import fsolve
 from scipy.stats import norm, rv_continuous
 from scipy.misc import derivative
 from learning.constants import (
-    alp,
-    bet,
-    gam,
+    ALP,
+    BET,
+    GAM,
     r,
     sig,
     rouexit,
@@ -28,18 +28,17 @@ QUAD_OPTIONS = {"epsrel": 0.005}
 # choose a function f(tee), monotone increasing ----
 @njit
 def funcf(tee: float) -> float:
-    return alp * np.exp(bet * tee) + gam
+    return ALP * np.exp(BET * tee) + GAM
 
 
 ## F(x), checked by mathematica
 def fint(tee: float, start_age: float = 0) -> float:
-    tee = tee + start_age
-    return fint_no_constant(tee) - fint_no_constant(start_age)
+    return fint_no_constant(tee + start_age) - fint_no_constant(start_age)
 
 
 @njit
 def fint_no_constant(tee: float) -> float:
-    return alp / bet * np.exp(bet * tee) + gam * tee
+    return ALP / BET * np.exp(BET * tee) + GAM * tee
 
 
 # pi(l) ----
@@ -55,23 +54,23 @@ def pi_ell(tee, pi0):
 
 # V_G(t) ----
 @njit
-def vg(tee: float, phi: float) -> float:
-    return alp * np.exp(bet * tee) / (r - bet) + (gam - phi) / r
+def vg(tee: float, phi: float, r: float = r) -> float:
+    return ALP * np.exp(BET * tee) / (r - BET) + (GAM - phi) / r
 
 
 # l_*(t) function expanded thru mathematica (faster), no need to use Gamma(t) any more ----
 @njit
 def lstar(tee: float, phi: float) -> float:
     return np.log(
-        (bet - r)
+        (BET - r)
         * r
         * phi
         / (
-            -(alp**2) * np.exp(2 * bet * tee) * r
-            + (bet - r) * (gam + r) * (gam - phi)
-            + alp
-            * np.exp(bet * tee)
-            * (bet * (gam + r - phi) + r * (-2 * gam - r + phi))
+            -(ALP**2) * np.exp(2 * BET * tee) * r
+            + (BET - r) * (GAM + r) * (GAM - phi)
+            + ALP
+            * np.exp(BET * tee)
+            * (BET * (GAM + r - phi) + r * (-2 * GAM - r + phi))
         )
     )
 
@@ -79,7 +78,7 @@ def lstar(tee: float, phi: float) -> float:
 # f'(t)
 @njit
 def fdir(tee: float) -> float:
-    return np.exp(bet * tee) * alp * bet
+    return np.exp(BET * tee) * ALP * BET
 
 
 @njit
@@ -335,9 +334,13 @@ def murtexitc(R: float, Time: float) -> float:
     return quad(lambda x: murexitp(R=R, tee=x), 0, Time, epsrel=0.01)[0]
 
 
-def pmf(tee: float, n: int) -> float:
+def pmf(tee: float, n: int, start_age: float = 0) -> float:
     return sum(
-        [(fint(tee) ** i) / (np.exp(fint(tee)) * math.factorial(i)) for i in range(n)]
+        [
+            (fint(tee, start_age) ** i)
+            / (np.exp(fint(tee, start_age)) * math.factorial(i))
+            for i in range(n)
+        ]
     )
 
 

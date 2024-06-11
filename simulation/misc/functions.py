@@ -32,9 +32,9 @@ def fint(x):
 
 ## F^{-1}(x), checked by mathematica
 def fintinv(x):
-    temp = (alp + bet * x - gam * lambertw(
-        alp * exp((alp + bet * x) / gam) / gam
-    )) / (bet * gam)
+    temp = (alp + bet * x - gam * lambertw(alp * exp((alp + bet * x) / gam) / gam)) / (
+        bet * gam
+    )
     return temp.real
 
 
@@ -54,15 +54,18 @@ def vg(tee, phi):
 # l_*(t) function expanded thru mathematica (faster), no need to use Gamma(t) any more ----
 def lstar(tee, phi):
     return log(
-        (bet - r) * r * phi / (
-                -alp ** 2 * exp(2 * bet * tee) * r + (bet - r) * (gam + r) * (gam - phi) + alp * exp(bet * tee) * (
-                bet * (gam + r - phi) + r * (-2 * gam - r + phi)
-        )
+        (bet - r)
+        * r
+        * phi
+        / (
+            -(alp**2) * exp(2 * bet * tee) * r
+            + (bet - r) * (gam + r) * (gam - phi)
+            + alp * exp(bet * tee) * (bet * (gam + r - phi) + r * (-2 * gam - r + phi))
         )
     )
 
 
-'''
+"""
 # define Gamma(t) ----
 def funcgamma(tee, phi):
     return phi / (funcf(tee) * (1 + vg(tee, phi)))
@@ -79,21 +82,30 @@ print(time()-starttime)
 starttime = time()
 lstar(2,0.05)
 print(time()-starttime)
-'''
+"""
 
 
 ## define ltilde_*(t, phi), function expanded thru mathematica ----
 def ltilde(tee, phi):
-    return alp / bet * (exp(bet * tee) - 1) + gam * tee + log(
-        (bet - r) * r * phi / (
-                -alp ** 2 * exp(2 * bet * tee) * r + (bet - r) * (gam + r) * (gam - phi) + alp * exp(bet * tee) * (
-                bet * (gam + r - phi) + r * (-2 * gam - r + phi)
-        )
+    return (
+        alp / bet * (exp(bet * tee) - 1)
+        + gam * tee
+        + log(
+            (bet - r)
+            * r
+            * phi
+            / (
+                -(alp**2) * exp(2 * bet * tee) * r
+                + (bet - r) * (gam + r) * (gam - phi)
+                + alp
+                * exp(bet * tee)
+                * (bet * (gam + r - phi) + r * (-2 * gam - r + phi))
+            )
         )
     )
 
 
-'''
+"""
 def ltildeold(tee, phi):
     return lstar(tee, phi) + fint(tee)
 
@@ -106,7 +118,7 @@ print(time()-starttime)
 starttime = time()
 ltilde(2,0.05)
 print(time()-starttime)
-'''
+"""
 
 
 # numerically calculate ltilde_*^(-1)(t, phi)
@@ -114,7 +126,7 @@ def ltildeinv(y, phi):
     return fsolve(lambda x: ltilde(x, phi) - y, 0.1).item()
 
 
-'''
+"""
 # def ltildeprime(tee, phi):
 #    return gammaprime(tee, phi) / (funcgamma(tee, phi) * (1 - funcgamma(tee, phi))) + funcf(tee)
 
@@ -133,7 +145,7 @@ def ltildeprime(x, phi):
 ## ltilde_*^{-1}'(y) ----
 def ltildeinvprime(y, phi):
    return 1 / ltildeprime(ltildeinv(y, phi), phi)
-'''
+"""
 
 
 # K(l,t) ----
@@ -145,7 +157,7 @@ def funck(l, tee, phi):
 # print(funck(2, 1, 0.3))
 # print(time()-starttime) #0.0005 seconds
 
-'''
+"""
 def funck(l, tee, phi):
    return ltildeinv(alp / bet * (exp(bet * tee) - 1) + gam * tee + l, phi)
 
@@ -158,7 +170,7 @@ print(time()-starttime)
 starttime = time()
 funcknew(1,2,0.05)
 print(time()-starttime)
-'''
+"""
 
 
 # S(l,t) ----
@@ -170,10 +182,12 @@ def funcs(l, tee, phi):
 # print(funcs(2, 1, 0.3))
 # print(time()-starttime) #0.0005 seconds
 
+
 ## eta(l,t, phi)
 def funceta(l, tee, phi):
     return -vl(l, tee, phi) * funcf(tee) + funcpi(l) * funcf(tee) * (
-            1 + vg(tee, phi) - funcv(l, tee, phi))
+        1 + vg(tee, phi) - funcv(l, tee, phi)
+    )
 
 
 # V(l,t)
@@ -193,16 +207,14 @@ def z(k, s, phi):
         def temp0(tau):
             return r + funcpi(lstar(k, phi) + fint(k) - fint(k + tau)) * funcf(k + tau)
 
-        return (funcpi(
-            lstar(k, phi) + fint(k) - fint(k + theta)
-        ) * funcf(k + theta) * (1 + vg(k + theta, phi)) - phi
-                ) * exp(quad(
-            temp0, theta, s, epsrel=0.05
-        )[0])
+        return (
+            funcpi(lstar(k, phi) + fint(k) - fint(k + theta))
+            * funcf(k + theta)
+            * (1 + vg(k + theta, phi))
+            - phi
+        ) * exp(quad(temp0, theta, s, epsrel=0.05)[0])
 
-    return quad(
-        temp, 0, s, epsrel=0.05
-    )[0] * (-1)
+    return quad(temp, 0, s, epsrel=0.05)[0] * (-1)
 
 
 # starttime = time()
@@ -210,14 +222,23 @@ def z(k, s, phi):
 # print('V_l = ' + str(vl(9,14,0.9)))
 # print(str(time()-starttime) + ' sec')
 
+
 # need to check again
 def funcmu(Time, l, tee, phi, skills):
     def temp(x):
-        return rouentry * exp(
-            -rouexit * (Time - x) + (
-                (- fint(tee) + fint(tee - (Time - x))) if skills else 0
+        return (
+            rouentry
+            * exp(
+                -rouexit * (Time - x)
+                + ((-fint(tee) + fint(tee - (Time - x))) if skills else 0)
             )
-        ) * nu(l + fint(tee) - fint(tee - (Time - x)), 1 / phi, tee - (Time - x), skills)
+            * nu(
+                l + fint(tee) - fint(tee - (Time - x)),
+                1 / phi,
+                tee - (Time - x),
+                skills,
+            )
+        )
 
     return quad(temp, max(Time - tee, 0), Time)[0]
     # else:
@@ -236,9 +257,11 @@ def muGinf(Time, tee):
 
             return quad(temp0, lstar(tee - Time + tao, phi), np.inf, epsrel=0.1)[0]
 
-        return exp(-rouexit * (Time - tao)) * funcf(tee - Time + tao) * quad(
-            temp1, 0, upperbound,
-            epsrel=0.1)[0]
+        return (
+            exp(-rouexit * (Time - tao))
+            * funcf(tee - Time + tao)
+            * quad(temp1, 0, upperbound, epsrel=0.1)[0]
+        )
 
     return quad(temp, max(Time - tee, 0), Time, epsrel=0.5)[0]
 
@@ -247,10 +270,15 @@ def muGinf(Time, tee):
 def mur(R, Time, tee):
     def temp1(phi):
         def temp0(l):
-            return (funcpi(l) * norm.pdf(R, mugg, sigg) + (1 - funcpi(l)) * norm.pdf(R, mubg, sibg)
-                    ) * funcmu(Time, l, tee, phi, True) + (
-                           funcpi(l) * norm.pdf(R, mugb, sigb) + (1 - funcpi(l)) * norm.pdf(R, mubb, sibb)
-                   ) * funcmu(Time, l, tee, phi, False)
+            return (
+                funcpi(l) * norm.pdf(R, mugg, sigg)
+                + (1 - funcpi(l)) * norm.pdf(R, mubg, sibg)
+            ) * funcmu(Time, l, tee, phi, True) + (
+                funcpi(l) * norm.pdf(R, mugb, sigb)
+                + (1 - funcpi(l)) * norm.pdf(R, mubb, sibb)
+            ) * funcmu(
+                Time, l, tee, phi, False
+            )
 
         return quad(temp0, lstar(tee, phi), np.inf, epsrel=0.05)[0]
 
@@ -273,7 +301,9 @@ def mas(Time, tee):
 # Total exit
 def exit(Time, tee):
     def temp(phi):
-        return funcmu(Time, lstar(tee, phi), tee, phi, True) + funcmu(Time, lstar(tee, phi), tee, phi, False)
+        return funcmu(Time, lstar(tee, phi), tee, phi, True) + funcmu(
+            Time, lstar(tee, phi), tee, phi, False
+        )
 
     return quad(temp, 0, upperbound)[0] + rouexit * mas(Time, tee)
 
@@ -281,12 +311,17 @@ def exit(Time, tee):
 # Distribution of returns of those who exit
 def murexit(R, Time, tee):
     def temp(phi):
-        funcpi(lstar(tee, phi)) * norm.pdf(R, mugg, sigg) + (
-                1 - funcpi(lstar(tee, phi))
-        ) * norm.pdf(R, mubg, sibg) * funcmu(Time, lstar(tee, phi), tee, phi, True) + (
-                funcpi(lstar(tee, phi)) * norm.pdf(R, mugb, sigb) + (
-                1 - funcpi(lstar(tee, phi))
-        ) * norm.pdf(R, mubb, sibb) * funcmu(Time, lstar(tee, phi), tee, phi, False)
+        (
+            funcpi(lstar(tee, phi)) * norm.pdf(R, mugg, sigg)
+            + (1 - funcpi(lstar(tee, phi)))
+            * norm.pdf(R, mubg, sibg)
+            * funcmu(Time, lstar(tee, phi), tee, phi, True)
+            + (
+                funcpi(lstar(tee, phi)) * norm.pdf(R, mugb, sigb)
+                + (1 - funcpi(lstar(tee, phi)))
+                * norm.pdf(R, mubb, sibb)
+                * funcmu(Time, lstar(tee, phi), tee, phi, False)
+            )
         )
 
     return quad(temp, 0, upperbound)[0] + rouexit * mur(R, Time, tee)
@@ -304,9 +339,17 @@ def lambdal(skills):
 
 # entering agents draw their type from a distribution nu(l, phi, t, s)
 def nu(l, phi, tee, skills):
-    return nubar(skills) * lambdal(skills) * exp(
-        -lambdal(skills) * l) * 1 / upperbound * (phi > 0) * (
-                   phi < upperbound) * lbda * exp(-lbda * tee)
+    return (
+        nubar(skills)
+        * lambdal(skills)
+        * exp(-lambdal(skills) * l)
+        * 1
+        / upperbound
+        * (phi > 0)
+        * (phi < upperbound)
+        * lbda
+        * exp(-lbda * tee)
+    )
 
 
 # integrand for entry rate
@@ -336,18 +379,25 @@ def prblt(Time, tee, t0):
 # until time T at time t for good type who has age a and type l
 def exittime(Time, tee, a, l0, phi):
     def temp(s):
-        return funcf(s) * exp(fint(tee) - fint(s)) * paibad(
-            l0, s - tee, a, phi) * exp(-rouexit * (Time - s))
+        return (
+            funcf(s)
+            * exp(fint(tee) - fint(s))
+            * paibad(l0, s - tee, a, phi)
+            * exp(-rouexit * (Time - s))
+        )
 
-    return exp(fint(tee) - fint(Time)) * paibad(l0, Time - tee, a, phi) + quad(
-        temp, tee, Time
-    )[0]
+    return (
+        exp(fint(tee) - fint(Time)) * paibad(l0, Time - tee, a, phi)
+        + quad(temp, tee, Time)[0]
+    )
 
 
 def upbd(alp, bet, gam, r):
-    return (alp + gam - 0.5 * (r + bet)
-            ) if alp > 0 else (
-            alp + gam - 0.5 * (r + alp * bet / (alp + gam)))
+    return (
+        (alp + gam - 0.5 * (r + bet))
+        if alp > 0
+        else (alp + gam - 0.5 * (r + alp * bet / (alp + gam)))
+    )
 
 
 # calculate eta and entry rate, later using parallel computing
@@ -359,27 +409,22 @@ def ent(r_v):
     upperbound = upbd(alp, bet, gam, r)
 
     phi_value = np.linspace(start=0.0001, stop=upperbound, num=8)
-    dflstar = expand_grid(
-        {'tee': tee_value, 'phi': phi_value}
-    )
+    dflstar = expand_grid({"tee": tee_value, "phi": phi_value})
 
-    dflstar['lst'] = dflstar.apply(lambda x: lstar(x['tee'], x['phi']), axis=1)
+    dflstar["lst"] = dflstar.apply(lambda x: lstar(x["tee"], x["phi"]), axis=1)
 
-    df = expand_grid({'l': l_value,
-                      'tee': tee_value,
-                      'phi': phi_value}
-                     )
+    df = expand_grid({"l": l_value, "tee": tee_value, "phi": phi_value})
 
     df = df.merge(dflstar)
-    df = df[df['l'] > df['lst']]
+    df = df[df["l"] > df["lst"]]
 
-    df['eta'] = df.swifter.apply(lambda x: funceta(x['l'], x['tee'], x['phi']), axis=1)
+    df["eta"] = df.swifter.apply(lambda x: funceta(x["l"], x["tee"], x["phi"]), axis=1)
 
-    entry = nquad(entryint, [
-        lambda phi, tee: [lstar(tee, phi), np.inf],
-        [0, upperbound],
-        [0, np.inf]
-    ], opts=[quadoptions, quadoptions, quadoptions])[0]
+    entry = nquad(
+        entryint,
+        [lambda phi, tee: [lstar(tee, phi), np.inf], [0, upperbound], [0, np.inf]],
+        opts=[quadoptions, quadoptions, quadoptions],
+    )[0]
 
     return dict(plotdata=df, entrydata=entry)
 
@@ -398,34 +443,57 @@ def pdetaun(tau, l0, tee):
 
 def ve(l0, tee, phi, taue):
     def temp(taun):
-        return (exp(-r * taun) + quad(lambda s: exp(-r * s) * funcf(s), taun, np.inf)[0]
-                ) * pdetaun(taun, l0, tee)
+        return (
+            exp(-r * taun) + quad(lambda s: exp(-r * s) * funcf(s), taun, np.inf)[0]
+        ) * pdetaun(taun, l0, tee)
 
-    return -phi * exp(-r * tee) / r + quad(temp, tee, taue)[0] + phi * exp(-r * taue) / r * (
-            1 - quad(lambda taun: pdetaun(taun, l0, tee), tee, taue)[0])
+    return (
+        -phi * exp(-r * tee) / r
+        + quad(temp, tee, taue)[0]
+        + phi
+        * exp(-r * taue)
+        / r
+        * (1 - quad(lambda taun: pdetaun(taun, l0, tee), tee, taue)[0])
+    )
 
 
 def veprime(l0, tee, phi, taue):
-    return (exp(-r * taue) * (1 - phi / r) + quad(lambda s: exp(-r * s) * funcf(s), taue, np.inf)[0]
-            ) * pdetaun(taue, l0, tee) - phi * exp(-r * taue) * (
-                   1 - quad(lambda taun: pdetaun(taun, l0, tee), tee, taue)[0])
+    return (
+        exp(-r * taue) * (1 - phi / r)
+        + quad(lambda s: exp(-r * s) * funcf(s), taue, np.inf)[0]
+    ) * pdetaun(taue, l0, tee) - phi * exp(-r * taue) * (
+        1 - quad(lambda taun: pdetaun(taun, l0, tee), tee, taue)[0]
+    )
+
 
 # minimum value of l0
 def lmin(phi, tee):
-    return fint(tee) -log(
-        funcf(tee)*(1 - phi / r + exp(r * tee) * quad(lambda s: exp(-r * s) * funcf(s), tee, np.inf)[0]
-         ) / phi - 1
+    return fint(tee) - log(
+        funcf(tee)
+        * (
+            1
+            - phi / r
+            + exp(r * tee) * quad(lambda s: exp(-r * s) * funcf(s), tee, np.inf)[0]
+        )
+        / phi
+        - 1
     )
 
 
 def pmf(tee, ns):
-    return sum([(fint(tee)**n)/(exp(fint(tee)) * np.math.factorial(n)) for n in range(ns)])
+    return sum(
+        [(fint(tee) ** n) / (exp(fint(tee)) * np.math.factorial(n)) for n in range(ns)]
+    )
 
 
 def tmeans(n):
     def dens(tee, n):
-        return (fint(tee) ** (n - 1) * funcf(tee)) / (exp(fint(tee)) * np.math.factorial(n - 1))
-    return quad(lambda tee: tee*dens(tee, n), 0, np.inf)[0]
+        return (fint(tee) ** (n - 1) * funcf(tee)) / (
+            exp(fint(tee)) * np.math.factorial(n - 1)
+        )
+
+    return quad(lambda tee: tee * dens(tee, n), 0, np.inf)[0]
+
 
 # # second half of the value function for type G
 # def valuestochG(taoe, taon, phi):

@@ -4,9 +4,9 @@ import numpy as np
 FIG_DIR = PROJECT_ROOT / "figures"
 DATA_DIR = PROJECT_ROOT / "data"
 
-alp = -0.5
-bet = -0.2
-gam = 1
+ALP = -0.5
+BET = -0.2
+GAM = 1
 r = 0.1
 
 # standard deviation of return for type G
@@ -30,9 +30,9 @@ nubarb = 1 - nubarg
 
 # check: upperbound must exceed 0!!!
 upperbound = (
-    (alp + gam - 0.5 * (r + bet))
-    if alp > 0
-    else ((alp + gam) - (r + alp * bet / (alp + gam)) / 2)
+    (ALP + GAM - 0.5 * (r + BET))
+    if ALP > 0
+    else ((ALP + GAM) - (r + ALP * BET / (ALP + GAM)) / 2)
 )
 
 # ((alp + gam) * r * (1 + gam / r + alp / (-bet + r))) / (alp + gam + r)
